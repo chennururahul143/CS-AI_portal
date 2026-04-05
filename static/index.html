@@ -1,0 +1,1917 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CS AI Tutor — Maynooth University</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    /* ── TOKENS ── */
+    :root {
+      --bg: #ffffff;
+      --bg-subtle: #f7f7f7;
+      --bg-hover: #f0f0f0;
+      --surface: #ffffff;
+      --border: #e5e5e5;
+      --border-focus: #000000;
+      --text-primary: #0a0a0a;
+      --text-secondary: #6b6b6b;
+      --text-tertiary: #a0a0a0;
+      --accent: #0a0a0a;
+      --accent-fg: #ffffff;
+      --user-bubble: #0a0a0a;
+      --user-fg: #ffffff;
+      --ai-bubble: #f7f7f7;
+      --ai-fg: #0a0a0a;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --sidebar-w: 260px;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 18px;
+      --font: 'Geist', -apple-system, sans-serif;
+      --font-mono: 'Geist Mono', 'Courier New', monospace;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, .06), 0 1px 2px rgba(0, 0, 0, .04);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, .08);
+      --shadow-lg: 0 12px 40px rgba(0, 0, 0, .12);
+      --transition: 150ms cubic-bezier(.4, 0, .2, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg: #0a0a0a;
+      --bg-subtle: #141414;
+      --bg-hover: #1a1a1a;
+      --surface: #141414;
+      --border: #2a2a2a;
+      --border-focus: #ffffff;
+      --text-primary: #fafafa;
+      --text-secondary: #a0a0a0;
+      --text-tertiary: #6b6b6b;
+      --accent: #ffffff;
+      --accent-fg: #0a0a0a;
+      --user-bubble: #ffffff;
+      --user-fg: #0a0a0a;
+      --ai-bubble: #1a1a1a;
+      --ai-fg: #fafafa;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, .3);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, .4);
+      --shadow-lg: 0 12px 40px rgba(0, 0, 0, .5);
+    }
+
+    /* ── RESET ── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-primary);
+      background: var(--bg);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button {
+      font-family: var(--font);
+      cursor: pointer;
+    }
+
+    input,
+    textarea {
+      font-family: var(--font);
+    }
+
+    /* ── LAYOUT ── */
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      height: 100%;
+      background: var(--bg-subtle);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: transform var(--transition);
+      overflow: hidden;
+    }
+
+    .sidebar-top {
+      padding: 16px 12px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .wordmark {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      margin-bottom: 4px;
+    }
+
+    .wordmark-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--accent-fg);
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .wordmark-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      letter-spacing: -.02em;
+    }
+
+    .btn-new {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 400;
+      transition: all var(--transition);
+      text-align: left;
+    }
+
+    .btn-new:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--border-focus);
+    }
+
+    .btn-new:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+
+    .btn-new svg {
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 12px 12px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      padding: 16px 8px 6px;
+    }
+
+    .chat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 7px 10px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-align: left;
+      transition: all var(--transition);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .chat-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .chat-item.active {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .chat-item:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+
+    .chat-item-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
+    /* ── TOOLS SECTION ── */
+    .tool-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 7px 10px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-align: left;
+      transition: all var(--transition);
+    }
+
+    .tool-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .tool-item:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+
+    .tool-item-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+      background: var(--bg-hover);
+    }
+
+    .tool-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .tool-item-name {
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tool-item-sub {
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .tool-badge {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 1px 6px;
+      border-radius: 20px;
+      background: var(--bg-hover);
+      color: var(--text-tertiary);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .tool-badge.new {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: transparent;
+    }
+
+    .tool-item.disabled {
+      opacity: .45;
+      pointer-events: none;
+    }
+
+    .sidebar-bottom {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 7px 10px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-size: 13px;
+      transition: all var(--transition);
+    }
+
+    .theme-toggle:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .theme-toggle:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+      background: var(--bg);
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      height: 52px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .menu-btn {
+      display: none;
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+    }
+
+    .menu-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .model-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--bg-subtle);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .model-pill:hover {
+      border-color: var(--text-secondary);
+    }
+
+    .model-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      flex-shrink: 0;
+    }
+
+    .model-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .model-chevron {
+      color: var(--text-tertiary);
+      font-size: 10px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      font-size: 15px;
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .icon-btn:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+
+    /* ── CHAT AREA ── */
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    /* ── LANDING ── */
+    .landing {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      gap: 32px;
+    }
+
+    .landing-hero {
+      text-align: center;
+    }
+
+    .landing-title {
+      font-size: 28px;
+      font-weight: 300;
+      letter-spacing: -.04em;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .landing-sub {
+      font-size: 15px;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .suggestions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .suggestion-btn {
+      padding: 12px 14px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-align: left;
+      line-height: 1.4;
+      transition: all var(--transition);
+    }
+
+    .suggestion-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .suggestion-btn:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+
+    .suggestion-label {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      margin-bottom: 3px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    /* ── MESSAGES ── */
+    .messages {
+      display: none;
+      flex-direction: column;
+      padding: 24px 0 8px;
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+      gap: 0;
+    }
+
+    .messages.visible {
+      display: flex;
+    }
+
+    .msg-group {
+      display: flex;
+      flex-direction: column;
+      padding: 4px 20px;
+    }
+
+    .msg-group+.msg-group {
+      margin-top: 4px;
+    }
+
+    .msg-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .msg-row.user {
+      flex-direction: row-reverse;
+    }
+
+    .msg-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .msg-avatar.ai {
+      background: var(--accent);
+      color: var(--accent-fg);
+    }
+
+    .msg-avatar.user {
+      background: var(--bg-subtle);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .msg-content {
+      max-width: 80%;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .msg-row.user .msg-content {
+      align-items: flex-end;
+    }
+
+    .msg-bubble {
+      padding: 10px 14px;
+      border-radius: var(--radius-xl);
+      font-size: 14px;
+      line-height: 1.65;
+      word-break: break-word;
+    }
+
+    .msg-bubble.ai {
+      background: transparent;
+      color: var(--text-primary);
+      border-radius: 0;
+      padding: 2px 0;
+    }
+
+    .msg-bubble.user {
+      background: var(--user-bubble);
+      color: var(--user-fg);
+      border-bottom-right-radius: var(--radius-sm);
+    }
+
+    .msg-meta {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      padding: 0 2px;
+    }
+
+    .msg-bubble pre {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      overflow-x: auto;
+      margin: 8px 0;
+      font-size: 12px;
+      line-height: 1.7;
+      font-family: var(--font-mono);
+    }
+
+    .msg-bubble code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--bg-subtle);
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .msg-bubble.user code {
+      background: rgba(255, 255, 255, .15);
+      border-color: rgba(255, 255, 255, .2);
+    }
+
+    .msg-bubble ol,
+    .msg-bubble ul {
+      padding-left: 18px;
+      margin: 6px 0;
+    }
+
+    .msg-bubble li {
+      margin-bottom: 3px;
+    }
+
+    .msg-bubble strong {
+      font-weight: 600;
+    }
+
+    /* ── TOOL TAG ── */
+    .tool-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-bottom: 6px;
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    /* ── TYPING ── */
+    .typing-row {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 20px;
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .typing-row.show {
+      display: flex;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+      padding: 2px 0;
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    .typing-dots span:nth-child(2) {
+      animation-delay: .2s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: .4s;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      80%,
+      100% {
+        opacity: .3;
+        transform: scale(.8);
+      }
+
+      40% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* ── INPUT AREA ── */
+    .input-wrap {
+      flex-shrink: 0;
+      padding: 12px 20px 20px;
+      max-width: 760px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .pdf-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .pdf-banner.show {
+      display: flex;
+    }
+
+    .pdf-banner-name {
+      flex: 1;
+      font-weight: 500;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pdf-remove {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 0 2px;
+      transition: color var(--transition);
+    }
+
+    .pdf-remove:hover {
+      color: var(--danger);
+    }
+
+    .input-box {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .input-box:focus-within {
+      border-color: var(--text-secondary);
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, .06);
+    }
+
+    [data-theme="dark"] .input-box:focus-within {
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, .06);
+    }
+
+    .input-textarea {
+      width: 100%;
+      padding: 14px 16px 6px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 15px;
+      line-height: 1.5;
+      resize: none;
+      min-height: 24px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .input-textarea::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .input-actions {
+      display: flex;
+      align-items: center;
+      padding: 6px 10px 10px 12px;
+      gap: 6px;
+    }
+
+    .input-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 8px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-tertiary);
+      font-size: 12px;
+      transition: all var(--transition);
+    }
+
+    .input-action-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+      border-color: var(--text-tertiary);
+    }
+
+    .input-action-btn:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+
+    .input-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .model-select {
+      padding: 4px 8px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-family: var(--font);
+      outline: none;
+      cursor: pointer;
+      transition: all var(--transition);
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .model-select:hover {
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
+    }
+
+    .model-select:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+
+    .send-btn {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      color: var(--accent-fg);
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover {
+      opacity: .85;
+      transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+      opacity: .3;
+      transform: none;
+      cursor: not-allowed;
+    }
+
+    .send-btn:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+
+    .input-footer {
+      text-align: center;
+      padding: 6px 0 0;
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    /* ── MODEL DROPDOWN ── */
+    .model-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      width: 260px;
+      z-index: 100;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      animation: fadeIn .12s ease;
+    }
+
+    .model-menu.open {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .model-menu-header {
+      padding: 10px 14px 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+
+    .model-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      width: 100%;
+      background: transparent;
+      border: none;
+      text-align: left;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+
+    .model-option:hover {
+      background: var(--bg-hover);
+    }
+
+    .model-option:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: -2px;
+    }
+
+    .model-option-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .model-option-info {
+      flex: 1;
+    }
+
+    .model-option-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .model-option-desc {
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .model-option-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    .badge-free {
+      background: rgba(22, 163, 74, .12);
+      color: #16a34a;
+    }
+
+    .badge-fast {
+      background: rgba(59, 130, 246, .12);
+      color: #3b82f6;
+    }
+
+    .badge-local {
+      background: rgba(245, 158, 11, .12);
+      color: #d97706;
+    }
+
+    .model-option.active .model-option-name::after {
+      content: " ✓";
+      color: var(--success);
+    }
+
+    /* ── TOOL MODALS ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .4);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      animation: backdropIn .15s ease;
+    }
+
+    @keyframes backdropIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      width: 90%;
+      max-width: 460px;
+      box-shadow: var(--shadow-lg);
+      animation: modalIn .15s ease;
+    }
+
+    @keyframes modalIn {
+      from {
+        opacity: 0;
+        transform: scale(.97) translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: -.02em;
+    }
+
+    .modal-close {
+      width: 28px;
+      height: 28px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-tertiary);
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+    }
+
+    .modal-close:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: var(--font);
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    .form-input:focus {
+      border-color: var(--border-focus);
+    }
+
+    .form-select {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: var(--font);
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      transition: border-color var(--transition);
+    }
+
+    .form-select:focus {
+      border-color: var(--border-focus);
+    }
+
+    .form-textarea {
+      width: 100%;
+      padding: 9px 12px;
+      min-height: 80px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: var(--font);
+      outline: none;
+      resize: vertical;
+      transition: border-color var(--transition);
+    }
+
+    .form-textarea:focus {
+      border-color: var(--border-focus);
+    }
+
+    .form-divider {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin: 10px 0;
+    }
+
+    .form-upload-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px;
+      background: var(--bg-subtle);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .form-upload-btn:hover {
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
+      background: var(--bg-hover);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      color: var(--accent-fg);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 500;
+      transition: all var(--transition);
+      margin-top: 4px;
+    }
+
+    .btn-primary:hover {
+      opacity: .85;
+    }
+
+    .btn-primary:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+
+    .btn-panic {
+      background: #dc2626;
+      color: #fff;
+    }
+
+    .btn-panic:hover {
+      background: #b91c1c;
+      opacity: 1;
+    }
+
+    #upload-input,
+    #lecturer-pdf {
+      display: none;
+    }
+
+    /* ── DIAGRAM ── */
+    .diagram-wrap {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin: 10px 0;
+      overflow-x: auto;
+    }
+
+    .diagram-error {
+      background: #fef9c3;
+      border: 1px solid #fde047;
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #854d0e;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        transform: translateX(-100%);
+        z-index: 50;
+        box-shadow: var(--shadow-lg);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .4);
+        z-index: 40;
+      }
+
+      .sidebar-overlay.show {
+        display: block;
+      }
+
+      .menu-btn {
+        display: flex;
+      }
+
+      .suggestions {
+        grid-template-columns: 1fr;
+      }
+
+      .input-wrap {
+        padding: 12px 12px 16px;
+      }
+
+      .messages {
+        padding: 16px 0 8px;
+      }
+
+      .msg-group {
+        padding: 4px 12px;
+      }
+
+      .model-pill .model-name {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Conversations and tools">
+      <div class="sidebar-top">
+        <div class="wordmark">
+          <div class="wordmark-icon" aria-hidden="true">CS</div>
+          <span class="wordmark-text">CS AI Tutor</span>
+        </div>
+        <button class="btn-new" onclick="newChat()" aria-label="Start new chat">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          New chat
+        </button>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Chat history and tools">
+
+        <div class="nav-label">Study Tools</div>
+        <button class="tool-item" onclick="openModal('panic')" aria-label="Open Exam Panic Mode">
+          <div class="tool-item-icon" aria-hidden="true">🚨</div>
+          <div class="tool-item-info">
+            <div class="tool-item-name">Exam Panic Mode</div>
+            <div class="tool-item-sub">Instant revision plan</div>
+          </div>
+          <span class="tool-badge new">New</span>
+        </button>
+        <button class="tool-item" onclick="openModal('clash')" aria-label="Open Concept Clash">
+          <div class="tool-item-icon" aria-hidden="true">⚡</div>
+          <div class="tool-item-info">
+            <div class="tool-item-name">Concept Clash</div>
+            <div class="tool-item-sub">Compare two concepts</div>
+          </div>
+          <span class="tool-badge new">New</span>
+        </button>
+        <button class="tool-item" onclick="openModal('lecturer')" aria-label="Open Explain My Lecturer">
+          <div class="tool-item-icon" aria-hidden="true">📄</div>
+          <div class="tool-item-info">
+            <div class="tool-item-name">Explain My Lecturer</div>
+            <div class="tool-item-sub">Decode lecture slides</div>
+          </div>
+          <span class="tool-badge new">New</span>
+        </button>
+        <button class="tool-item disabled" aria-disabled="true">
+          <div class="tool-item-icon" aria-hidden="true">📝</div>
+          <div class="tool-item-info">
+            <div class="tool-item-name">Assignment Breakdown</div>
+            <div class="tool-item-sub">Plan your assignment</div>
+          </div>
+          <span class="tool-badge">Soon</span>
+        </button>
+        <button class="tool-item disabled" aria-disabled="true">
+          <div class="tool-item-icon" aria-hidden="true">🎓</div>
+          <div class="tool-item-info">
+            <div class="tool-item-name">Viva Simulator</div>
+            <div class="tool-item-sub">Practice your viva</div>
+          </div>
+          <span class="tool-badge">Soon</span>
+        </button>
+
+        <div class="nav-label" style="margin-top:8px;">Recent</div>
+        <div id="chat-history">
+          <div style="font-size:12px;color:var(--text-tertiary);padding:6px 8px;">No conversations yet</div>
+        </div>
+
+      </nav>
+
+      <div class="sidebar-bottom">
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">
+          <span id="theme-icon">🌙</span>
+          <span id="theme-label">Dark mode</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()" aria-hidden="true"></div>
+
+    <!-- MAIN -->
+    <main class="main" role="main">
+
+      <!-- TOPBAR -->
+      <div class="topbar" role="banner">
+        <div class="topbar-left">
+          <button class="menu-btn" id="menu-btn" onclick="toggleSidebar()" aria-label="Open sidebar"
+            aria-expanded="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+
+          <div style="position:relative;">
+            <button class="model-pill" onclick="toggleModelMenu()" aria-label="Select AI model" aria-expanded="false"
+              id="model-pill-btn">
+              <div class="model-dot" aria-hidden="true"></div>
+              <span class="model-name" id="active-model-name">Groq · Llama 3.3 70B</span>
+              <span class="model-chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="model-menu" id="model-menu" role="listbox" aria-label="AI models">
+              <div class="model-menu-header">Choose model</div>
+              <button class="model-option active" role="option" aria-selected="true"
+                onclick="selectModel('groq','Groq · Llama 3.3 70B','#16a34a')">
+                <div class="model-option-dot" style="background:#16a34a;" aria-hidden="true"></div>
+                <div class="model-option-info">
+                  <div class="model-option-name">Groq — Llama 3.3 70B</div>
+                  <div class="model-option-desc">Fast responses, 2–5 seconds</div>
+                </div>
+                <span class="model-option-badge badge-fast">Fast</span>
+              </button>
+              <button class="model-option" role="option" aria-selected="false"
+                onclick="selectModel('nvidia','NVIDIA · gpt-oss-120B','#8b5cf6')">
+                <div class="model-option-dot" style="background:#8b5cf6;" aria-hidden="true"></div>
+                <div class="model-option-info">
+                  <div class="model-option-name">NVIDIA — gpt-oss-120B</div>
+                  <div class="model-option-desc">Deep reasoning, 120B model</div>
+                </div>
+                <span class="model-option-badge badge-free">Free</span>
+              </button>
+              <button class="model-option" role="option" aria-selected="false"
+                onclick="selectModel('ollama','Ollama · DeepSeek R1 8B','#d97706')">
+                <div class="model-option-dot" style="background:#d97706;" aria-hidden="true"></div>
+                <div class="model-option-info">
+                  <div class="model-option-name">Ollama — DeepSeek R1 8B</div>
+                  <div class="model-option-desc">Local, works offline</div>
+                </div>
+                <span class="model-option-badge badge-local">Local</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <button class="icon-btn" onclick="clearChat()" title="Clear chat" aria-label="Clear conversation">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- CHAT AREA -->
+      <div class="chat-area" id="chat-area" role="log" aria-live="polite" aria-label="Chat messages">
+
+        <!-- LANDING -->
+        <div class="landing" id="landing" aria-label="Welcome screen">
+          <div class="landing-hero">
+            <h1 class="landing-title">What do you want to learn?</h1>
+            <p class="landing-sub">Ask anything — CS, law, business, engineering, medicine.</p>
+          </div>
+          <div class="suggestions" role="list">
+            <button class="suggestion-btn" role="listitem" onclick="suggest(this)">
+              <div class="suggestion-label">Algorithms</div>
+              Explain Dijkstra's algorithm with an example
+            </button>
+            <button class="suggestion-btn" role="listitem" onclick="suggest(this)">
+              <div class="suggestion-label">Cryptography</div>
+              How does RSA encryption actually work?
+            </button>
+            <button class="suggestion-btn" role="listitem" onclick="suggest(this)">
+              <div class="suggestion-label">Deep Learning</div>
+              Explain backpropagation step by step
+            </button>
+            <button class="suggestion-btn" role="listitem" onclick="suggest(this)">
+              <div class="suggestion-label">Testing</div>
+              Compare TDD vs BDD with examples
+            </button>
+          </div>
+        </div>
+
+        <!-- MESSAGES -->
+        <div class="messages" id="messages" aria-label="Conversation"></div>
+
+        <!-- TYPING -->
+        <div class="typing-row" id="typing" aria-live="polite" aria-label="AI is thinking">
+          <div class="msg-avatar ai" aria-hidden="true">AI</div>
+          <div class="typing-dots" aria-label="Loading">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- INPUT -->
+      <div class="input-wrap" role="form" aria-label="Message input">
+        <div class="pdf-banner" id="pdf-banner" role="status">
+          <span aria-hidden="true">📎</span>
+          <span class="pdf-banner-name" id="pdf-name">document.pdf</span>
+          <button class="pdf-remove" onclick="clearPdf()" aria-label="Remove uploaded PDF">✕</button>
+        </div>
+        <div class="input-box">
+          <textarea id="chat-input" class="input-textarea" placeholder="Ask any question..." rows="1"
+            aria-label="Type your message" aria-multiline="true"></textarea>
+          <div class="input-actions">
+            <button class="input-action-btn" onclick="document.getElementById('upload-input').click()"
+              aria-label="Upload PDF">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Upload PDF
+            </button>
+            <input type="file" id="upload-input" accept=".pdf" aria-label="Choose PDF file">
+            <div class="input-right">
+              <select class="model-select" id="model-select" aria-label="Select model for this message">
+                <option value="groq">Groq</option>
+                <option value="nvidia">NVIDIA</option>
+                <option value="ollama">Ollama</option>
+              </select>
+              <button class="send-btn" id="send-btn" onclick="sendMessage()" aria-label="Send message"
+                title="Send (Enter)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  aria-hidden="true">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="input-footer">Enter to send · Shift+Enter for new line</div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MODEL MENU OVERLAY -->
+  <div id="model-menu-overlay" style="display:none;position:fixed;inset:0;z-index:99;" onclick="closeModelMenu()"></div>
+
+  <!-- EXAM PANIC MODE MODAL -->
+  <div class="modal-backdrop" id="modal-panic" role="dialog" aria-modal="true" aria-labelledby="panic-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="panic-title">🚨 Exam Panic Mode</h2>
+        <button class="modal-close" onclick="closeModal('panic')" aria-label="Close">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="panic-module">Module</label>
+        <select class="form-select" id="panic-module">
+          <option value="">Select your module...</option>
+          <option>CS603 — Rigorous Software Process</option>
+          <option>CS605 — Mathematics and Theory of CS</option>
+          <option>CS607 — Requirements Engineering</option>
+          <option>CS608 — Software Testing</option>
+          <option>CS610 — Interaction Design</option>
+          <option>CS613 — Advanced OOP</option>
+          <option>CS616 — Practical Cryptography</option>
+          <option>CS618 — Deep Learning</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="panic-topic">Specific topic (optional)</label>
+        <input class="form-input" id="panic-topic" type="text" placeholder="e.g. backpropagation, RSA, TDD...">
+      </div>
+      <button class="btn-primary btn-panic" onclick="submitPanic()">Generate My Revision Plan</button>
+    </div>
+  </div>
+
+  <!-- CONCEPT CLASH MODAL -->
+  <div class="modal-backdrop" id="modal-clash" role="dialog" aria-modal="true" aria-labelledby="clash-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="clash-title">⚡ Concept Clash</h2>
+        <button class="modal-close" onclick="closeModal('clash')" aria-label="Close">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="clash-a">First concept</label>
+        <input class="form-input" id="clash-a" type="text" placeholder="e.g. RSA">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="clash-b">Second concept</label>
+        <input class="form-input" id="clash-b" type="text" placeholder="e.g. AES">
+      </div>
+      <button class="btn-primary" onclick="submitClash()">Compare These Concepts</button>
+    </div>
+  </div>
+
+  <!-- EXPLAIN MY LECTURER MODAL -->
+  <div class="modal-backdrop" id="modal-lecturer" role="dialog" aria-modal="true" aria-labelledby="lecturer-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="lecturer-title">📄 Explain My Lecturer</h2>
+        <button class="modal-close" onclick="closeModal('lecturer')" aria-label="Close">✕</button>
+      </div>
+      <div class="form-group">
+        <button class="form-upload-btn" onclick="document.getElementById('lecturer-pdf').click()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          Upload lecture PDF
+        </button>
+        <input type="file" id="lecturer-pdf" accept=".pdf" aria-label="Upload lecture PDF">
+      </div>
+      <div class="form-divider">— or paste slide content —</div>
+      <div class="form-group">
+        <label class="form-label" for="lecturer-text">Paste text</label>
+        <textarea class="form-textarea" id="lecturer-text" placeholder="Paste your lecture notes here..."></textarea>
+      </div>
+      <button class="btn-primary" onclick="submitLecturer()">Explain This Content</button>
+    </div>
+  </div>
+
+  <script>
+    const AGENT_URL = "http://localhost:5000";
+    const AGENT_TOKEN = "";
+
+    let selectedModel = "groq";
+    let pdfContext = null;
+    let isLanding = true;
+    let chatHistory = [];
+    let isDark = false;
+
+    /* ── THEME ── */
+    function toggleTheme() {
+      isDark = !isDark;
+      document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+      document.getElementById("theme-icon").textContent = isDark ? "☀️" : "🌙";
+      document.getElementById("theme-label").textContent = isDark ? "Light mode" : "Dark mode";
+    }
+
+    /* ── SIDEBAR ── */
+    function toggleSidebar() {
+      const sb = document.getElementById("sidebar");
+      const ov = document.getElementById("sidebar-overlay");
+      const btn = document.getElementById("menu-btn");
+      const open = sb.classList.toggle("open");
+      ov.classList.toggle("show", open);
+      btn.setAttribute("aria-expanded", open);
+    }
+    function closeSidebar() {
+      document.getElementById("sidebar").classList.remove("open");
+      document.getElementById("sidebar-overlay").classList.remove("show");
+      document.getElementById("menu-btn").setAttribute("aria-expanded", "false");
+    }
+
+    /* ── MODEL ── */
+    function toggleModelMenu() {
+      const menu = document.getElementById("model-menu");
+      const ov = document.getElementById("model-menu-overlay");
+      const btn = document.getElementById("model-pill-btn");
+      const open = menu.classList.toggle("open");
+      ov.style.display = open ? "block" : "none";
+      btn.setAttribute("aria-expanded", open);
+    }
+    function closeModelMenu() {
+      document.getElementById("model-menu").classList.remove("open");
+      document.getElementById("model-menu-overlay").style.display = "none";
+      document.getElementById("model-pill-btn").setAttribute("aria-expanded", "false");
+    }
+    function selectModel(val, label, color) {
+      selectedModel = val;
+      document.getElementById("active-model-name").textContent = label;
+      document.querySelector(".model-dot").style.background = color;
+      document.getElementById("model-select").value = val;
+      document.querySelectorAll(".model-option").forEach(o => {
+        o.classList.remove("active");
+        o.setAttribute("aria-selected", "false");
+      });
+      event.currentTarget.classList.add("active");
+      event.currentTarget.setAttribute("aria-selected", "true");
+      closeModelMenu();
+    }
+
+    /* ── PDF UPLOAD ── */
+    document.getElementById("upload-input").addEventListener("change", function () {
+      const file = this.files[0];
+      if (!file) return;
+      document.getElementById("pdf-name").textContent = file.name;
+      document.getElementById("pdf-banner").classList.add("show");
+      pdfContext = "[PDF: " + file.name + " — content would be extracted here]";
+      this.value = "";
+    });
+    function clearPdf() {
+      pdfContext = null;
+      document.getElementById("pdf-banner").classList.remove("show");
+    }
+
+    /* ── CHAT ── */
+    function switchToChat() {
+      if (!isLanding) return;
+      isLanding = false;
+      document.getElementById("landing").style.display = "none";
+      document.getElementById("messages").classList.add("visible");
+    }
+
+    function suggest(btn) {
+      const text = btn.textContent.replace(/^[A-Z].*\n/, "").trim();
+      document.getElementById("chat-input").value = text;
+      sendMessage();
+    }
+
+    function newChat() {
+      isLanding = true;
+      chatHistory = [];
+      pdfContext = null;
+      document.getElementById("landing").style.display = "";
+      document.getElementById("messages").classList.remove("visible");
+      document.getElementById("messages").innerHTML = "";
+      document.getElementById("pdf-banner").classList.remove("show");
+      closeSidebar();
+    }
+
+    function clearChat() { if (confirm("Clear this conversation?")) newChat(); }
+
+    async function sendMessage() {
+      const input = document.getElementById("chat-input");
+      const msg = input.value.trim();
+      if (!msg) return;
+      input.value = "";
+      input.style.height = "auto";
+      switchToChat();
+      appendMsg(msg, "user");
+      setLoading(true);
+
+      try {
+        const res = await fetch(AGENT_URL + "/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Agent-Token": AGENT_TOKEN },
+          body: JSON.stringify({ message: msg, pdf_context: pdfContext, model: selectedModel })
+        });
+        const data = await res.json();
+        setLoading(false);
+        if (data.error) appendMsg("Sorry — " + data.message, "ai", "error");
+        else { appendMsg(data.reply, "ai", "", data.source); addToHistory(msg); }
+      } catch (e) {
+        setLoading(false);
+        appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+      }
+    }
+
+    function appendMsg(text, role, type, source) {
+      const msgs = document.getElementById("messages");
+      const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const group = document.createElement("div");
+      group.className = "msg-group";
+      const row = document.createElement("div");
+      row.className = "msg-row " + role;
+      const avatar = document.createElement("div");
+      avatar.className = "msg-avatar " + role;
+      avatar.textContent = role === "user" ? "You" : "AI";
+      avatar.setAttribute("aria-hidden", "true");
+      const content = document.createElement("div");
+      content.className = "msg-content";
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble " + role;
+      if (role === "ai") bubble.innerHTML = formatMarkdown(text);
+      else bubble.textContent = text;
+      const meta = document.createElement("div");
+      meta.className = "msg-meta";
+      const sourceLabel = source === "groq" ? "Groq" : source === "nvidia" ? "NVIDIA" : source === "ollama" ? "Ollama" : "";
+      meta.textContent = now + (sourceLabel ? " · " + sourceLabel : "");
+      content.appendChild(bubble);
+      content.appendChild(meta);
+      row.appendChild(avatar);
+      row.appendChild(content);
+      group.appendChild(row);
+      msgs.appendChild(group);
+      document.getElementById("chat-area").scrollTop = document.getElementById("chat-area").scrollHeight;
+    }
+
+    function setLoading(on) {
+      document.getElementById("send-btn").disabled = on;
+      document.getElementById("chat-input").disabled = on;
+      document.getElementById("typing").classList.toggle("show", on);
+      if (on) document.getElementById("chat-area").scrollTop = 9999;
+    }
+
+    function addToHistory(msg) {
+      const hist = document.getElementById("chat-history");
+      if (hist.querySelector("div")) hist.querySelector("div").remove();
+      const btn = document.createElement("button");
+      btn.className = "chat-item active";
+      btn.innerHTML = '<div class="chat-item-dot"></div>' + msg.slice(0, 38) + (msg.length > 38 ? "…" : "");
+      hist.prepend(btn);
+    }
+
+    /* ── MARKDOWN ── */
+    function formatMarkdown(text) {
+      text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      text = text.replace(/```[\w]*\n?([\s\S]*?)```/g, (m, c) => `<pre><code>${c.trim()}</code></pre>`);
+      text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+      text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      text = text.replace(/\*(.+?)\*/g, "<em>$1</em>");
+      text = text.replace(/^#{1,3}\s(.+)$/gm, "<strong>$1</strong>");
+      text = text.replace(/^\d+\.\s(.+)$/gm, "<li>$1</li>");
+      text = text.replace(/^[-*]\s(.+)$/gm, "<li>$1</li>");
+      text = text.replace(/(<li>.*<\/li>\n*)+/g, "<ol>$&</ol>");
+      text = text.replace(/\n{2,}/g, "<br><br>");
+      text = text.replace(/\n/g, "<br>");
+      return text;
+    }
+
+    /* ── MODALS ── */
+    function openModal(id) {
+      document.getElementById("modal-" + id).classList.add("open");
+      closeSidebar();
+      setTimeout(() => {
+        const first = document.querySelector("#modal-" + id + " select, #modal-" + id + " input");
+        if (first) first.focus();
+      }, 150);
+    }
+    function closeModal(id) { document.getElementById("modal-" + id).classList.remove("open"); }
+    document.querySelectorAll(".modal-backdrop").forEach(b => {
+      b.addEventListener("click", e => { if (e.target === b) b.classList.remove("open"); });
+    });
+
+    function submitPanic() {
+      const mod = document.getElementById("panic-module").value;
+      const topic = document.getElementById("panic-topic").value.trim();
+      if (!mod) { alert("Please select a module."); return; }
+      closeModal("panic");
+      switchToChat();
+      const msg = "Exam Panic Mode — " + mod + (topic ? " · " + topic : "");
+      appendMsg(msg, "user");
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        appendMsg("I am generating your revision plan for **" + mod + "**" + (topic ? " focusing on " + topic : "") + ". In the live version this would call `/tool/panic` and return your top 5 topics, key definitions, practice questions, a 60-minute revision plan, and last-minute tips.", "ai", "", "groq");
+      }, 1800);
+    }
+
+    function submitClash() {
+      const a = document.getElementById("clash-a").value.trim();
+      const b = document.getElementById("clash-b").value.trim();
+      if (!a || !b) { alert("Please enter both concepts."); return; }
+      closeModal("clash");
+      switchToChat();
+      appendMsg("Concept Clash: " + a + " vs " + b, "user");
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        appendMsg("Here is the clash between **" + a + "** and **" + b + "**:\n\nIn the live version this returns a side-by-side comparison table, real-world analogies for each concept, when to use which, and 3 quiz questions to test your understanding.", "ai", "", "groq");
+      }, 1600);
+    }
+
+    function submitLecturer() {
+      const text = document.getElementById("lecturer-text").value.trim();
+      const file = document.getElementById("lecturer-pdf").files[0];
+      if (!text && !file) { alert("Please upload a PDF or paste some text."); return; }
+      closeModal("lecturer");
+      switchToChat();
+      appendMsg("[Explain My Lecturer] " + (file ? file.name : "pasted content"), "user");
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        appendMsg("I have analysed your lecture content. In the live version this returns a plain English summary, the top 3 key concepts explained simply, real-world examples for each, and likely exam questions based on this content.", "ai", "", "groq");
+      }, 2000);
+    }
+
+    /* ── INPUT AUTO-RESIZE ── */
+    const inp = document.getElementById("chat-input");
+    inp.addEventListener("input", function () {
+      this.style.height = "auto";
+      this.style.height = Math.min(this.scrollHeight, 160) + "px";
+    });
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+
+    /* ── ESCAPE KEY ── */
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") {
+        document.querySelectorAll(".modal-backdrop.open").forEach(m => m.classList.remove("open"));
+        closeModelMenu();
+      }
+    });
+  </script>
+</body>
+
+</html>

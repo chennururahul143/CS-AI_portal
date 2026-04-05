@@ -1,0 +1,6 @@
+flask
+requests
+pymupdf
+groq
+openai
+flask-cors

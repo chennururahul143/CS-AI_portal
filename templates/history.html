@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History — CS AI Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <div>
+                <div class="header-logo">CS AI Agent</div>
+                <div class="header-sub">Masters Programme Tutor</div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="nav">
+        <a href="{{ url_for('index') }}">Chat</a>
+        <a href="{{ url_for('history') }}" class="active">History</a>
+    </nav>
+
+    <div class="container">
+
+        <div class="section-title">Past Conversations</div>
+
+        {% if sessions %}
+        {% for s in sessions %}
+        <a href="{{ url_for('load_session', session_id=s.session_id) }}" class="history-card">
+            <div class="history-preview">{{ s.preview }}</div>
+            <div class="history-meta-row">
+                <span class="history-badge">{{ s.message_count }} messages</span>
+                <span>{{ s.started }}</span>
+            </div>
+        </a>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            No conversations yet.<br>
+            <a href="{{ url_for('index') }}" class="btn-primary" style="margin-top:14px;display:inline-block;">
+                Start chatting
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+
+</body>
+
+</html>
