@@ -4,10 +4,10 @@ import requests
 import re
 from modules_context import MODULES_CONTEXT
 
-GROQ_API_KEY   = "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"
+GROQ_API_KEY   = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL     = "llama-3.3-70b-versatile"
 
-NVIDIA_API_KEY = "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"
+NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
 NVIDIA_URL     = "https://integrate.api.nvidia.com/v1"
 NVIDIA_MODEL   = "openai/gpt-oss-120b"
 

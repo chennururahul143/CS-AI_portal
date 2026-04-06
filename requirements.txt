@@ -4,3 +4,4 @@ pymupdf
 groq
 openai
 flask-cors
+python-dotenv
