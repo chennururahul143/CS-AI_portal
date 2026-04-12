@@ -216,6 +216,7 @@
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
+      position: relative;
     }
 
     .chat-item:hover {
@@ -240,6 +241,150 @@
       border-radius: 50%;
       background: var(--text-tertiary);
       flex-shrink: 0;
+    }
+
+    .chat-item-text {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chat-item-icons {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+
+    .chat-item-icon-indicator {
+      font-size: 10px;
+      opacity: .6;
+    }
+
+    .chat-item-more {
+      width: 22px;
+      height: 22px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-tertiary);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .chat-item:hover .chat-item-more {
+      display: flex;
+    }
+
+    .chat-item-more:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    /* ── CONTEXT MENU ── */
+    .ctx-menu {
+      position: fixed;
+      z-index: 300;
+      min-width: 180px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      padding: 4px;
+      animation: fadeIn .1s ease;
+      display: none;
+    }
+
+    .ctx-menu.open {
+      display: block;
+    }
+
+    .ctx-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 7px 10px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-family: var(--font);
+      text-align: left;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .ctx-menu-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .ctx-menu-item.danger:hover {
+      background: rgba(220, 38, 38, .08);
+      color: var(--danger);
+    }
+
+    .ctx-menu-icon {
+      width: 16px;
+      text-align: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .ctx-menu-sep {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 6px;
+    }
+
+    .ctx-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 299;
+    }
+
+    .ctx-overlay.open {
+      display: block;
+    }
+
+    /* ── RENAME INLINE ── */
+    .chat-item-rename {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-focus);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: var(--font);
+      padding: 2px 6px;
+      outline: none;
+      width: 100%;
+    }
+
+    /* ── HISTORY GROUP ── */
+    .history-group-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      padding: 12px 8px 4px;
+    }
+
+    .history-empty {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      padding: 6px 8px;
     }
 
     /* ── TOOLS SECTION ── */
@@ -701,6 +846,21 @@
       max-width: 720px;
       width: 100%;
       margin: 0 auto;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 6px;
+      height: 14px;
+      background-color: var(--text-primary);
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
     }
 
     .typing-row.show {
@@ -1400,7 +1560,7 @@
 
         <div class="nav-label" style="margin-top:8px;">Recent</div>
         <div id="chat-history">
-          <div style="font-size:12px;color:var(--text-tertiary);padding:6px 8px;">No conversations yet</div>
+          <div class="history-empty" id="history-empty">No conversations yet</div>
         </div>
 
       </nav>
@@ -1414,6 +1574,29 @@
     </aside>
 
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()" aria-hidden="true"></div>
+
+    <!-- CONTEXT MENU -->
+    <div class="ctx-overlay" id="ctx-overlay" onclick="closeCtxMenu()"></div>
+    <div class="ctx-menu" id="ctx-menu" role="menu">
+      <button class="ctx-menu-item" onclick="ctxAction('rename')" role="menuitem">
+        <span class="ctx-menu-icon">✏️</span> Rename
+      </button>
+      <button class="ctx-menu-item" onclick="ctxAction('pin')" role="menuitem">
+        <span class="ctx-menu-icon" id="ctx-pin-icon">📌</span>
+        <span id="ctx-pin-label">Pin</span>
+      </button>
+      <button class="ctx-menu-item" onclick="ctxAction('favorite')" role="menuitem">
+        <span class="ctx-menu-icon" id="ctx-fav-icon">⭐</span>
+        <span id="ctx-fav-label">Favorite</span>
+      </button>
+      <div class="ctx-menu-sep"></div>
+      <button class="ctx-menu-item" onclick="ctxAction('archive')" role="menuitem">
+        <span class="ctx-menu-icon">📦</span> Archive
+      </button>
+      <button class="ctx-menu-item danger" onclick="ctxAction('delete')" role="menuitem">
+        <span class="ctx-menu-icon">🗑️</span> Delete
+      </button>
+    </div>
 
     <!-- MAIN -->
     <main class="main" role="main">
@@ -1649,13 +1832,28 @@
 
   <script>
     const AGENT_URL = "";
-    const AGENT_TOKEN = "";
 
     let selectedModel = "groq";
     let pdfContext = null;
     let isLanding = true;
-    let chatHistory = [];
     let isDark = false;
+
+    /* ── SESSION MANAGEMENT ── */
+    let currentSessionId = localStorage.getItem("cs_current_session") || null;
+    let allSessions = [];
+    let ctxTargetId = null;
+
+    function getHeaders() {
+      const h = { "Content-Type": "application/json" };
+      if (currentSessionId) h["X-Session-Id"] = currentSessionId;
+      return h;
+    }
+
+    function getHeadersNoBody() {
+      const h = {};
+      if (currentSessionId) h["X-Session-Id"] = currentSessionId;
+      return h;
+    }
 
     /* ── THEME ── */
     function toggleTheme() {
@@ -1663,6 +1861,15 @@
       document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
       document.getElementById("theme-icon").textContent = isDark ? "☀️" : "🌙";
       document.getElementById("theme-label").textContent = isDark ? "Light mode" : "Dark mode";
+      localStorage.setItem("cs_theme", isDark ? "dark" : "light");
+    }
+
+    // Restore theme on load
+    if (localStorage.getItem("cs_theme") === "dark") {
+      isDark = true;
+      document.documentElement.setAttribute("data-theme", "dark");
+      document.getElementById("theme-icon").textContent = "☀️";
+      document.getElementById("theme-label").textContent = "Light mode";
     }
 
     /* ── SIDEBAR ── */
@@ -1736,18 +1943,36 @@
       sendMessage();
     }
 
-    function newChat() {
+    async function newChat() {
+      // Create a new session on the server
+      try {
+        const res = await fetch(AGENT_URL + "/new-session", { method: "POST" });
+        const data = await res.json();
+        currentSessionId = data.session_id;
+        localStorage.setItem("cs_current_session", currentSessionId);
+      } catch (e) {
+        currentSessionId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+        localStorage.setItem("cs_current_session", currentSessionId);
+      }
+
       isLanding = true;
-      chatHistory = [];
       pdfContext = null;
       document.getElementById("landing").style.display = "";
       document.getElementById("messages").classList.remove("visible");
       document.getElementById("messages").innerHTML = "";
       document.getElementById("pdf-banner").classList.remove("show");
+      highlightActiveChat();
       closeSidebar();
     }
 
-    function clearChat() { if (confirm("Clear this conversation?")) newChat(); }
+    function clearChat() {
+      if (confirm("Clear this conversation?")) {
+        if (currentSessionId) {
+          fetch(AGENT_URL + "/history/" + currentSessionId + "/delete", { method: "DELETE" }).then(() => loadSidebar());
+        }
+        newChat();
+      }
+    }
 
     async function sendMessage() {
       const input = document.getElementById("chat-input");
@@ -1762,22 +1987,223 @@
       try {
         const res = await fetch(AGENT_URL + "/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-Agent-Token": AGENT_TOKEN },
+          headers: getHeaders(),
           body: JSON.stringify({ message: msg, pdf_context: pdfContext, model: selectedModel })
         });
         const data = await res.json();
         setLoading(false);
-        if (data.error) appendMsg("Sorry — " + data.message, "ai", "error");
-        else { appendMsg(data.reply, "ai", "", data.source); addToHistory(msg); }
+        if (data.error) {
+          appendMsg("Sorry — " + data.message, "ai", "error");
+        } else {
+          await appendMsg(data.reply, "ai", "", data.source);
+          // Update session ID if server returned one
+          if (data.session_id && data.session_id !== currentSessionId) {
+            currentSessionId = data.session_id;
+            localStorage.setItem("cs_current_session", currentSessionId);
+          }
+          loadSidebar();
+        }
       } catch (e) {
         setLoading(false);
         appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
       }
     }
 
-    function appendMsg(text, role, type, source) {
+    async function appendMsg(text, role, type, source) {
       const msgs = document.getElementById("messages");
       const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const group = document.createElement("div");
+      group.className = "msg-group";
+      const row = document.createElement("div");
+      row.className = "msg-row " + role;
+      const avatar = document.createElement("div");
+      avatar.className = "msg-avatar " + role;
+      avatar.textContent = role === "user" ? "You" : "AI";
+      avatar.setAttribute("aria-hidden", "true");
+      const content = document.createElement("div");
+      content.className = "msg-content";
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble " + role;
+      const meta = document.createElement("div");
+      meta.className = "msg-meta";
+      const sourceLabel = source === "groq" ? "Groq" : source === "nvidia" ? "NVIDIA" : source === "ollama" ? "Ollama" : "";
+      meta.textContent = now + (sourceLabel ? " · " + sourceLabel : "");
+
+      content.appendChild(bubble);
+      content.appendChild(meta);
+      row.appendChild(avatar);
+      row.appendChild(content);
+      group.appendChild(row);
+      msgs.appendChild(group);
+
+      const chatArea = document.getElementById("chat-area");
+
+      // Typing effect for AI 
+      if (role === "ai" && type !== "error" && type !== "no-type") {
+        bubble.innerHTML = '<span class="cursor"></span>';
+        chatArea.scrollTop = chatArea.scrollHeight;
+
+        let currentText = "";
+        let i = 0;
+        while (i < text.length) {
+          // Type slightly faster by processing 2-5 characters at a time
+          let chunkSize = Math.floor(Math.random() * 4) + 2;
+          currentText += text.substring(i, i + chunkSize);
+          i += chunkSize;
+
+          bubble.innerHTML = formatMarkdown(currentText) + '<span class="cursor"></span>';
+          chatArea.scrollTop = chatArea.scrollHeight;
+
+          // 10-25ms delay per chunk feels like reading speed
+          await new Promise(r => setTimeout(r, Math.random() * 15 + 10));
+        }
+        // Remove cursor at end
+        bubble.innerHTML = formatMarkdown(text);
+      } else {
+        if (role === "ai") bubble.innerHTML = formatMarkdown(text);
+        else bubble.textContent = text;
+      }
+      
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function setLoading(on) {
+      document.getElementById("send-btn").disabled = on;
+      document.getElementById("chat-input").disabled = on;
+      document.getElementById("typing").classList.toggle("show", on);
+      if (on) document.getElementById("chat-area").scrollTop = 9999;
+    }
+
+    /* ── SIDEBAR HISTORY ── */
+    async function loadSidebar() {
+      try {
+        const res = await fetch(AGENT_URL + "/history");
+        const data = await res.json();
+        allSessions = data.sessions || [];
+        renderSidebar();
+      } catch (e) {
+        // Silently fail — sidebar just stays empty
+      }
+    }
+
+    function renderSidebar() {
+      const container = document.getElementById("chat-history");
+      container.innerHTML = "";
+
+      if (allSessions.length === 0) {
+        container.innerHTML = '<div class="history-empty">No conversations yet</div>';
+        return;
+      }
+
+      const now = new Date();
+      const todayStr = now.toDateString();
+      const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toDateString();
+      const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
+
+      const groups = { pinned: [], today: [], yesterday: [], week: [], older: [] };
+
+      allSessions.forEach(s => {
+        if (s.msg_count === 0) return; // Skip empty sessions
+        if (s.pinned) { groups.pinned.push(s); return; }
+        const d = new Date(s.updated_at);
+        if (d.toDateString() === todayStr) groups.today.push(s);
+        else if (d.toDateString() === yesterdayStr) groups.yesterday.push(s);
+        else if (d > weekAgo) groups.week.push(s);
+        else groups.older.push(s);
+      });
+
+      const renderGroup = (label, items) => {
+        if (items.length === 0) return;
+        const lbl = document.createElement("div");
+        lbl.className = "history-group-label";
+        lbl.textContent = label;
+        container.appendChild(lbl);
+        items.forEach(s => container.appendChild(createChatItem(s)));
+      };
+
+      renderGroup("📌 Pinned", groups.pinned);
+      renderGroup("Today", groups.today);
+      renderGroup("Yesterday", groups.yesterday);
+      renderGroup("Previous 7 Days", groups.week);
+      renderGroup("Older", groups.older);
+
+      highlightActiveChat();
+    }
+
+    function createChatItem(session) {
+      const btn = document.createElement("button");
+      btn.className = "chat-item" + (session.id === currentSessionId ? " active" : "");
+      btn.dataset.sessionId = session.id;
+      btn.onclick = () => loadSession(session.id);
+
+      const dot = document.createElement("div");
+      dot.className = "chat-item-dot";
+      if (session.pinned) dot.style.background = "#f59e0b";
+      else if (session.favorited) dot.style.background = "#ef4444";
+
+      const textSpan = document.createElement("span");
+      textSpan.className = "chat-item-text";
+      textSpan.textContent = session.title;
+
+      const icons = document.createElement("span");
+      icons.className = "chat-item-icons";
+      if (session.favorited) {
+        const star = document.createElement("span");
+        star.className = "chat-item-icon-indicator";
+        star.textContent = "⭐";
+        icons.appendChild(star);
+      }
+
+      const moreBtn = document.createElement("button");
+      moreBtn.className = "chat-item-more";
+      moreBtn.textContent = "⋯";
+      moreBtn.title = "More actions";
+      moreBtn.onclick = (e) => { e.stopPropagation(); openCtxMenu(e, session); };
+
+      btn.appendChild(dot);
+      btn.appendChild(textSpan);
+      btn.appendChild(icons);
+      btn.appendChild(moreBtn);
+      return btn;
+    }
+
+    function highlightActiveChat() {
+      document.querySelectorAll(".chat-item").forEach(el => {
+        el.classList.toggle("active", el.dataset.sessionId === currentSessionId);
+      });
+    }
+
+    async function loadSession(sessionId) {
+      try {
+        const res = await fetch(AGENT_URL + "/history/" + sessionId + "/messages");
+        const data = await res.json();
+        if (data.error) return;
+
+        currentSessionId = sessionId;
+        localStorage.setItem("cs_current_session", sessionId);
+
+        // Clear and show chat
+        isLanding = false;
+        document.getElementById("landing").style.display = "none";
+        document.getElementById("messages").classList.add("visible");
+        document.getElementById("messages").innerHTML = "";
+
+        // Render all messages
+        data.messages.forEach(m => {
+          const timeStr = m.created_at ? new Date(m.created_at.replace(" ", "T")).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+          appendMsgRaw(m.message, m.role === "user" ? "user" : "ai", m.source, timeStr);
+        });
+
+        highlightActiveChat();
+        closeSidebar();
+      } catch (e) {
+        console.error("Failed to load session:", e);
+      }
+    }
+
+    function appendMsgRaw(text, role, source, timeStr) {
+      const msgs = document.getElementById("messages");
       const group = document.createElement("div");
       group.className = "msg-group";
       const row = document.createElement("div");
@@ -1795,7 +2221,7 @@
       const meta = document.createElement("div");
       meta.className = "msg-meta";
       const sourceLabel = source === "groq" ? "Groq" : source === "nvidia" ? "NVIDIA" : source === "ollama" ? "Ollama" : "";
-      meta.textContent = now + (sourceLabel ? " · " + sourceLabel : "");
+      meta.textContent = (timeStr || "") + (sourceLabel ? " · " + sourceLabel : "");
       content.appendChild(bubble);
       content.appendChild(meta);
       row.appendChild(avatar);
@@ -1805,20 +2231,113 @@
       document.getElementById("chat-area").scrollTop = document.getElementById("chat-area").scrollHeight;
     }
 
-    function setLoading(on) {
-      document.getElementById("send-btn").disabled = on;
-      document.getElementById("chat-input").disabled = on;
-      document.getElementById("typing").classList.toggle("show", on);
-      if (on) document.getElementById("chat-area").scrollTop = 9999;
+    /* ── CONTEXT MENU ── */
+    function openCtxMenu(e, session) {
+      ctxTargetId = session.id;
+      const menu = document.getElementById("ctx-menu");
+      const overlay = document.getElementById("ctx-overlay");
+
+      // Update labels based on current state
+      document.getElementById("ctx-pin-label").textContent = session.pinned ? "Unpin" : "Pin";
+      document.getElementById("ctx-fav-label").textContent = session.favorited ? "Unfavorite" : "Favorite";
+      document.getElementById("ctx-fav-icon").textContent = session.favorited ? "💛" : "⭐";
+
+      // Position
+      const rect = e.currentTarget.getBoundingClientRect();
+      let top = rect.bottom + 4;
+      let left = rect.left;
+
+      // Clamp to viewport
+      if (top + 220 > window.innerHeight) top = rect.top - 220;
+      if (left + 180 > window.innerWidth) left = window.innerWidth - 190;
+
+      menu.style.top = top + "px";
+      menu.style.left = left + "px";
+      menu.classList.add("open");
+      overlay.classList.add("open");
     }
 
-    function addToHistory(msg) {
-      const hist = document.getElementById("chat-history");
-      if (hist.querySelector("div")) hist.querySelector("div").remove();
-      const btn = document.createElement("button");
-      btn.className = "chat-item active";
-      btn.innerHTML = '<div class="chat-item-dot"></div>' + msg.slice(0, 38) + (msg.length > 38 ? "…" : "");
-      hist.prepend(btn);
+    function closeCtxMenu() {
+      document.getElementById("ctx-menu").classList.remove("open");
+      document.getElementById("ctx-overlay").classList.remove("open");
+      ctxTargetId = null;
+    }
+
+    async function ctxAction(action) {
+      const sid = ctxTargetId;
+      closeCtxMenu();
+      if (!sid) return;
+
+      if (action === "rename") {
+        startRename(sid);
+        return;
+      }
+
+      if (action === "delete") {
+        if (!confirm("Delete this conversation permanently?")) return;
+        await fetch(AGENT_URL + "/history/" + sid + "/delete", { method: "DELETE" });
+        if (sid === currentSessionId) newChat();
+        loadSidebar();
+        return;
+      }
+
+      if (action === "archive") {
+        await fetch(AGENT_URL + "/history/" + sid + "/archive", { method: "POST" });
+        if (sid === currentSessionId) newChat();
+        loadSidebar();
+        return;
+      }
+
+      if (action === "pin") {
+        await fetch(AGENT_URL + "/history/" + sid + "/pin", { method: "POST" });
+        loadSidebar();
+        return;
+      }
+
+      if (action === "favorite") {
+        await fetch(AGENT_URL + "/history/" + sid + "/favorite", { method: "POST" });
+        loadSidebar();
+        return;
+      }
+    }
+
+    function startRename(sid) {
+      const item = document.querySelector(`.chat-item[data-session-id="${sid}"]`);
+      if (!item) return;
+      const textSpan = item.querySelector(".chat-item-text");
+      const currentTitle = textSpan.textContent;
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "chat-item-rename";
+      input.value = currentTitle;
+
+      textSpan.replaceWith(input);
+      input.focus();
+      input.select();
+
+      const finishRename = async () => {
+        const newTitle = input.value.trim() || currentTitle;
+        const newSpan = document.createElement("span");
+        newSpan.className = "chat-item-text";
+        newSpan.textContent = newTitle;
+        input.replaceWith(newSpan);
+
+        if (newTitle !== currentTitle) {
+          await fetch(AGENT_URL + "/history/" + sid + "/rename", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: newTitle })
+          });
+          loadSidebar();
+        }
+      };
+
+      input.addEventListener("blur", finishRename);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+        if (e.key === "Escape") { input.value = currentTitle; input.blur(); }
+      });
     }
 
     /* ── MARKDOWN ── */
@@ -1863,13 +2382,17 @@
       try {
         const res = await fetch(AGENT_URL + "/tool/panic", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getHeaders(),
           body: JSON.stringify({ module: mod, topic: topic, model: selectedModel })
         });
         const data = await res.json();
         setLoading(false);
         if (data.error) appendMsg("Sorry — " + data.message, "ai", "error");
-        else { appendMsg(data.reply, "ai", "", data.source); addToHistory(msg); }
+        else {
+          await appendMsg(data.reply, "ai", "", data.source);
+          if (data.session_id) { currentSessionId = data.session_id; localStorage.setItem("cs_current_session", currentSessionId); }
+          loadSidebar();
+        }
       } catch (e) {
         setLoading(false);
         appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
@@ -1888,13 +2411,17 @@
       try {
         const res = await fetch(AGENT_URL + "/tool/clash", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getHeaders(),
           body: JSON.stringify({ concept1: a, concept2: b, model: selectedModel })
         });
         const data = await res.json();
         setLoading(false);
         if (data.error) appendMsg("Sorry — " + data.message, "ai", "error");
-        else { appendMsg(data.reply, "ai", "", data.source); addToHistory(msg); }
+        else {
+          await appendMsg(data.reply, "ai", "", data.source);
+          if (data.session_id) { currentSessionId = data.session_id; localStorage.setItem("cs_current_session", currentSessionId); }
+          loadSidebar();
+        }
       } catch (e) {
         setLoading(false);
         appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
@@ -1921,7 +2448,11 @@
         const data = await res.json();
         setLoading(false);
         if (data.error) appendMsg("Sorry — " + data.message, "ai", "error");
-        else { appendMsg(data.reply, "ai", "", data.source); addToHistory("[Lecturer]"); }
+        else {
+          await appendMsg(data.reply, "ai", "", data.source);
+          if (data.session_id) { currentSessionId = data.session_id; localStorage.setItem("cs_current_session", currentSessionId); }
+          loadSidebar();
+        }
       } catch (e) {
         setLoading(false);
         appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
@@ -1943,8 +2474,21 @@
       if (e.key === "Escape") {
         document.querySelectorAll(".modal-backdrop.open").forEach(m => m.classList.remove("open"));
         closeModelMenu();
+        closeCtxMenu();
       }
     });
+
+    /* ── INIT ON PAGE LOAD ── */
+    (async function init() {
+      await loadSidebar();
+      // If we had a previous session, try to reload it
+      if (currentSessionId) {
+        const session = allSessions.find(s => s.id === currentSessionId);
+        if (session && session.msg_count > 0) {
+          await loadSession(currentSessionId);
+        }
+      }
+    })();
   </script>
 </body>
 
