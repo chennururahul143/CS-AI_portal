@@ -5,3 +5,4 @@ groq
 openai
 flask-cors
 python-dotenv
+gunicorn

@@ -1648,7 +1648,7 @@
   </div>
 
   <script>
-    const AGENT_URL = "http://localhost:5000";
+    const AGENT_URL = "";
     const AGENT_TOKEN = "";
 
     let selectedModel = "groq";
@@ -1851,7 +1851,7 @@
       b.addEventListener("click", e => { if (e.target === b) b.classList.remove("open"); });
     });
 
-    function submitPanic() {
+    async function submitPanic() {
       const mod = document.getElementById("panic-module").value;
       const topic = document.getElementById("panic-topic").value.trim();
       if (!mod) { alert("Please select a module."); return; }
@@ -1860,27 +1860,48 @@
       const msg = "Exam Panic Mode — " + mod + (topic ? " · " + topic : "");
       appendMsg(msg, "user");
       setLoading(true);
-      setTimeout(() => {
+      try {
+        const res = await fetch(AGENT_URL + "/tool/panic", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ module: mod, topic: topic, model: selectedModel })
+        });
+        const data = await res.json();
         setLoading(false);
-        appendMsg("I am generating your revision plan for **" + mod + "**" + (topic ? " focusing on " + topic : "") + ". In the live version this would call `/tool/panic` and return your top 5 topics, key definitions, practice questions, a 60-minute revision plan, and last-minute tips.", "ai", "", "groq");
-      }, 1800);
+        if (data.error) appendMsg("Sorry — " + data.message, "ai", "error");
+        else { appendMsg(data.reply, "ai", "", data.source); addToHistory(msg); }
+      } catch (e) {
+        setLoading(false);
+        appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+      }
     }
 
-    function submitClash() {
+    async function submitClash() {
       const a = document.getElementById("clash-a").value.trim();
       const b = document.getElementById("clash-b").value.trim();
       if (!a || !b) { alert("Please enter both concepts."); return; }
       closeModal("clash");
       switchToChat();
-      appendMsg("Concept Clash: " + a + " vs " + b, "user");
+      const msg = "Concept Clash: " + a + " vs " + b;
+      appendMsg(msg, "user");
       setLoading(true);
-      setTimeout(() => {
+      try {
+        const res = await fetch(AGENT_URL + "/tool/clash", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ concept1: a, concept2: b, model: selectedModel })
+        });
+        const data = await res.json();
         setLoading(false);
-        appendMsg("Here is the clash between **" + a + "** and **" + b + "**:\n\nIn the live version this returns a side-by-side comparison table, real-world analogies for each concept, when to use which, and 3 quiz questions to test your understanding.", "ai", "", "groq");
-      }, 1600);
+        if (data.error) appendMsg("Sorry — " + data.message, "ai", "error");
+        else { appendMsg(data.reply, "ai", "", data.source); addToHistory(msg); }
+      } catch (e) {
+        setLoading(false);
+        appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+      }
     }
 
-    function submitLecturer() {
+    async function submitLecturer() {
       const text = document.getElementById("lecturer-text").value.trim();
       const file = document.getElementById("lecturer-pdf").files[0];
       if (!text && !file) { alert("Please upload a PDF or paste some text."); return; }
@@ -1888,10 +1909,23 @@
       switchToChat();
       appendMsg("[Explain My Lecturer] " + (file ? file.name : "pasted content"), "user");
       setLoading(true);
-      setTimeout(() => {
+      try {
+        const formData = new FormData();
+        formData.append("model", selectedModel);
+        if (file) formData.append("pdf", file);
+        if (text) formData.append("text", text);
+        const res = await fetch(AGENT_URL + "/tool/lecturer", {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
         setLoading(false);
-        appendMsg("I have analysed your lecture content. In the live version this returns a plain English summary, the top 3 key concepts explained simply, real-world examples for each, and likely exam questions based on this content.", "ai", "", "groq");
-      }, 2000);
+        if (data.error) appendMsg("Sorry — " + data.message, "ai", "error");
+        else { appendMsg(data.reply, "ai", "", data.source); addToHistory("[Lecturer]"); }
+      } catch (e) {
+        setLoading(false);
+        appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+      }
     }
 
     /* ── INPUT AUTO-RESIZE ── */

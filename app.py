@@ -1,7 +1,11 @@
 from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from flask_cors import CORS
+from dotenv import load_dotenv
 import sqlite3, os, uuid, json
 from datetime import datetime
+
+load_dotenv()
+
 from agent import ask_agent
 from pdf_reader import extract_text, cleanup_upload
 
@@ -172,9 +176,11 @@ def tool_lecturer():
     save_message(session_id, "assistant", result["reply"], result["source"])
     return jsonify({"error": False, "reply": result["reply"], "source": result["source"], "tool": "lecturer"})
 
+# ── INIT DB (runs on import, required for gunicorn) ──
+init_db()
+
 # ── RUN — always at the very bottom ──
 if __name__ == "__main__":
-    init_db()
     print("CS Agent running at http://localhost:5000")
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host="0.0.0.0", port=port)
