@@ -2,6 +2,7 @@ from groq import Groq
 from openai import OpenAI as OpenAIClient
 import requests
 import re
+import os
 from modules_context import MODULES_CONTEXT
 
 GROQ_API_KEY   = os.environ.get("GROQ_API_KEY", "")
