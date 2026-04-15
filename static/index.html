@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CS AI Tutor — Maynooth University</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
@@ -101,6 +101,7 @@
     .app {
       display: flex;
       height: 100vh;
+      height: 100dvh;
     }
 
     /* ── SIDEBAR ── */
@@ -859,8 +860,15 @@
     }
 
     @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
     }
 
     .typing-row.show {
@@ -908,6 +916,7 @@
     .input-wrap {
       flex-shrink: 0;
       padding: 12px 20px 20px;
+      padding-bottom: calc(20px + env(safe-area-inset-bottom));
       max-width: 760px;
       width: 100%;
       margin: 0 auto;
@@ -1475,7 +1484,7 @@
       }
 
       .input-wrap {
-        padding: 12px 12px 16px;
+        padding: 12px 12px calc(16px + env(safe-area-inset-bottom));
       }
 
       .messages {
@@ -1916,13 +1925,37 @@
     }
 
     /* ── PDF UPLOAD ── */
-    document.getElementById("upload-input").addEventListener("change", function () {
+    document.getElementById("upload-input").addEventListener("change", async function () {
       const file = this.files[0];
       if (!file) return;
-      document.getElementById("pdf-name").textContent = file.name;
+      const fileNameStr = file.name;
+      document.getElementById("pdf-name").textContent = "Extracting " + fileNameStr + "...";
       document.getElementById("pdf-banner").classList.add("show");
-      pdfContext = "[PDF: " + file.name + " — content would be extracted here]";
       this.value = "";
+
+      const formData = new FormData();
+      formData.append("pdf", file);
+
+      try {
+        const res = await fetch(AGENT_URL + "/upload", {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          alert("Could not process PDF: " + data.message);
+          document.getElementById("pdf-banner").classList.remove("show");
+          pdfContext = null;
+        } else {
+          document.getElementById("pdf-name").textContent = fileNameStr;
+          pdfContext = data.pdf_context;
+        }
+      } catch (e) {
+        alert("Upload failed. Check connection.");
+        document.getElementById("pdf-banner").classList.remove("show");
+        pdfContext = null;
+      }
     });
     function clearPdf() {
       pdfContext = null;
@@ -2063,7 +2096,7 @@
         if (role === "ai") bubble.innerHTML = formatMarkdown(text);
         else bubble.textContent = text;
       }
-      
+
       chatArea.scrollTop = chatArea.scrollHeight;
     }
 

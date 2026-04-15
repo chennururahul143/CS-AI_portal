@@ -331,6 +331,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function formatMarkdown(text) {
         text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%; border-radius:8px; display:block; margin:10px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">');
         text = text.replace(/```[\w]*\n?([\s\S]*?)```/g, "<pre><code>$1</code></pre>");
         text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
         text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
