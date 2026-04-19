@@ -16,10 +16,45 @@ app.secret_key = os.environ.get("SECRET_KEY", "cs-agent-secret-2026")
 DB_PATH    = os.path.join(os.path.dirname(__file__), "database", "agent.db")
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 
+def get_db():
+    """Core helper to connect to SQLite."""
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
+    
+    # 1. Chat Sessions (Added user_id)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL, 
+            title TEXT NOT NULL DEFAULT 'New Chat',
+            pinned INTEGER DEFAULT 0,
+            favorited INTEGER DEFAULT 0,
+            archived INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    
+    # 2. Topic Tracker (Added user_id)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS topic_tracker (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            module_code TEXT NOT NULL,
+            module_name TEXT NOT NULL,
+            topic TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    # 3. Conversations
     conn.execute("""
         CREATE TABLE IF NOT EXISTS conversations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,37 +65,16 @@ def init_db():
             created_at TEXT NOT NULL
         )
     """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS chat_sessions (
-            id TEXT PRIMARY KEY,
-            title TEXT NOT NULL DEFAULT 'New Chat',
-            pinned INTEGER DEFAULT 0,
-            favorited INTEGER DEFAULT 0,
-            archived INTEGER DEFAULT 0,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS topic_tracker (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT NOT NULL,
-            module_code TEXT NOT NULL,
-            module_name TEXT NOT NULL,
-            topic TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        )
-    """)
     conn.commit()
     conn.close()
 
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_user_id():
+    """Identify the student (for isolation)."""
+    if "user_id" not in session:
+        session["user_id"] = str(uuid.uuid4())
+    return session["user_id"]
 
 def get_session_id():
-    """Get session_id from request header (set by frontend via localStorage) or Flask session."""
     sid = request.headers.get("X-Session-Id", "")
     if sid:
         return sid
@@ -69,14 +83,14 @@ def get_session_id():
     return session["session_id"]
 
 def ensure_session_exists(session_id, title="New Chat"):
-    """Create a chat_sessions row if it doesn't exist yet."""
+    user_id = get_user_id()
     conn = get_db()
     row = conn.execute("SELECT id FROM chat_sessions WHERE id=?", (session_id,)).fetchone()
     if not row:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         conn.execute(
-            "INSERT INTO chat_sessions (id, title, created_at, updated_at) VALUES (?,?,?,?)",
-            (session_id, title, now, now)
+            "INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at) VALUES (?,?,?,?,?)",
+            (session_id, user_id, title, now, now)
         )
         conn.commit()
     conn.close()
@@ -89,13 +103,10 @@ def update_session_timestamp(session_id):
     conn.close()
 
 def auto_title_session(session_id, first_message):
-    """Auto-generate a short title from the first user message."""
     title = first_message.strip()
-    # Remove tool prefixes
     for prefix in ["[Panic]", "[Clash]", "[Lecturer]", "Exam Panic Mode —", "Concept Clash:"]:
         if title.startswith(prefix):
             title = title[len(prefix):].strip()
-    # Truncate to ~50 chars at word boundary
     if len(title) > 50:
         title = title[:50].rsplit(" ", 1)[0] + "…"
     if not title:
@@ -131,30 +142,29 @@ def save_message(session_id, role, message, source="groq"):
     conn.close()
 
 def track_topic(session_id, user_message):
-    """Detect and record which topic a student's question maps to."""
+    user_id = get_user_id()
     topic_info = detect_topic(user_message)
     if topic_info:
         conn = get_db()
         conn.execute("""
-            INSERT INTO topic_tracker (session_id, module_code, module_name, topic, created_at)
-            VALUES (?,?,?,?,?)
-        """, (session_id, topic_info[0], topic_info[1], topic_info[2],
+            INSERT INTO topic_tracker (user_id, session_id, module_code, module_name, topic, created_at)
+            VALUES (?,?,?,?,?,?)
+        """, (user_id, session_id, topic_info[0], topic_info[1], topic_info[2],
               datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         conn.commit()
         conn.close()
     return topic_info
 
 def load_all_history():
-    """Load ALL user messages across ALL sessions (for learning memory)."""
+    user_id = get_user_id()
     conn = get_db()
     rows = conn.execute("""
         SELECT c.role, c.message FROM conversations c
         JOIN chat_sessions cs ON c.session_id = cs.id
-        WHERE cs.archived = 0
+        WHERE cs.user_id = ? AND cs.archived = 0
         ORDER BY c.created_at ASC
-    """).fetchall()
+    """, (user_id,)).fetchall()
     conn.close()
-    # Pair into user/assistant pairs
     history = []
     i = 0
     while i < len(rows) - 1:
@@ -166,12 +176,13 @@ def load_all_history():
     return history
 
 def load_topic_counts():
-    """Load topic frequency counts across all sessions."""
+    user_id = get_user_id()
     conn = get_db()
     rows = conn.execute("""
         SELECT topic, COUNT(*) as cnt FROM topic_tracker
+        WHERE user_id = ?
         GROUP BY topic ORDER BY cnt DESC
-    """).fetchall()
+    """, (user_id,)).fetchall()
     conn.close()
     return {r["topic"]: r["cnt"] for r in rows}
 
@@ -188,6 +199,10 @@ def chat():
     pdf_context = data.get("pdf_context", None)
     model_pref  = data.get("model", "groq")
     session_id  = get_session_id()
+    user_id     = get_user_id()
+
+    print(f"DEBUG: User ID: {user_id}")
+    print(f"DEBUG: Session ID: {session_id}")
     if not user_msg:
         return jsonify({"error": True, "message": "Please type a message."})
     ensure_session_exists(session_id)
@@ -298,28 +313,58 @@ def get_progress():
 def new_session():
     """Create a new chat session and return its ID."""
     sid = str(uuid.uuid4())
+    user_id = get_user_id()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_db()
-    conn.execute(
-        "INSERT INTO chat_sessions (id, title, created_at, updated_at) VALUES (?,?,?,?)",
-        (sid, "New Chat", now, now)
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute(
+            "INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at) VALUES (?,?,?,?,?)",
+            (sid, user_id, "New Chat", now, now)
+        )
+        conn.commit()
+    finally:
+        conn.close()
     return jsonify({"session_id": sid})
+
+# @app.route("/history", methods=["GET"])
+# def list_sessions():
+#     """Return all non-archived chat sessions, newest first."""
+#     conn = get_db()
+#     rows = conn.execute("""
+#         SELECT cs.id, cs.title, cs.pinned, cs.favorited, cs.created_at, cs.updated_at,
+#                (SELECT COUNT(*) FROM conversations c WHERE c.session_id = cs.id AND c.role = 'user') as msg_count
+#         FROM chat_sessions cs
+#         WHERE cs.archived = 0
+#         ORDER BY cs.pinned DESC, cs.updated_at DESC
+#     """).fetchall()
+#     conn.close()
+#     sessions = []
+#     for r in rows:
+#         sessions.append({
+#             "id": r["id"],
+#             "title": r["title"],
+#             "pinned": bool(r["pinned"]),
+#             "favorited": bool(r["favorited"]),
+#             "created_at": r["created_at"],
+#             "updated_at": r["updated_at"],
+#             "msg_count": r["msg_count"]
+#         })
+#     return jsonify({"sessions": sessions})
 
 @app.route("/history", methods=["GET"])
 def list_sessions():
-    """Return all non-archived chat sessions, newest first."""
+    """Return only the current user's non-archived chat sessions."""
+    user_id = get_user_id() # Filter by user
     conn = get_db()
     rows = conn.execute("""
         SELECT cs.id, cs.title, cs.pinned, cs.favorited, cs.created_at, cs.updated_at,
                (SELECT COUNT(*) FROM conversations c WHERE c.session_id = cs.id AND c.role = 'user') as msg_count
         FROM chat_sessions cs
-        WHERE cs.archived = 0
+        WHERE cs.user_id = ? AND cs.archived = 0
         ORDER BY cs.pinned DESC, cs.updated_at DESC
-    """).fetchall()
+    """, (user_id,)).fetchall()
     conn.close()
+    
     sessions = []
     for r in rows:
         sessions.append({

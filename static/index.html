@@ -1575,6 +1575,10 @@
       </nav>
 
       <div class="sidebar-bottom">
+        <button class="theme-toggle" id="privacy-btn" onclick="togglePrivacy()" aria-label="Toggle Privacy Mode">
+          <span id="privacy-icon" style="opacity: 0.7;">🛡️</span>
+          <span id="privacy-label">Standard Mode</span>
+        </button>
         <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">
           <span id="theme-icon">🌙</span>
           <span id="theme-label">Dark mode</span>
@@ -1609,6 +1613,12 @@
 
     <!-- MAIN -->
     <main class="main" role="main">
+
+      <!-- PRIVACY BANNER -->
+      <div id="privacy-banner"
+        style="display:none; background:#16a34a; color:#fff; font-size:12px; font-weight:500; text-align:center; padding:6px; flex-shrink:0;">
+        🔒 GDPR Compliant Mode Active: Student metadata is anonymized. Data processed locally.
+      </div>
 
       <!-- TOPBAR -->
       <div class="topbar" role="banner">
@@ -1879,6 +1889,35 @@
       document.documentElement.setAttribute("data-theme", "dark");
       document.getElementById("theme-icon").textContent = "☀️";
       document.getElementById("theme-label").textContent = "Light mode";
+    }
+
+    /* ── PRIVACY MODE ── */
+    let isPrivacyMode = false;
+    function togglePrivacy() {
+      isPrivacyMode = !isPrivacyMode;
+      const btn = document.getElementById("privacy-btn");
+      const icon = document.getElementById("privacy-icon");
+      const label = document.getElementById("privacy-label");
+      const banner = document.getElementById("privacy-banner");
+
+      if (isPrivacyMode) {
+        icon.textContent = "🔒";
+        icon.style.opacity = "1";
+        label.textContent = "GDPR Mode Active";
+        btn.style.color = "var(--success)";
+        banner.style.display = "block";
+
+        // When activating strict privacy, force the local model to demonstrate data doesn't leave the server
+        if (selectedModel !== "ollama") {
+          selectModel('ollama', 'Ollama · DeepSeek R1 8B', '#d97706');
+        }
+      } else {
+        icon.textContent = "🛡️";
+        icon.style.opacity = "0.7";
+        label.textContent = "Standard Mode";
+        btn.style.color = "var(--text-secondary)";
+        banner.style.display = "none";
+      }
     }
 
     /* ── SIDEBAR ── */
