@@ -65,17 +65,47 @@ def init_db():
             created_at TEXT NOT NULL
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL DEFAULT '',
+            session_id TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            content TEXT NOT NULL,
+            doc_type TEXT NOT NULL DEFAULT 'pdf',
+            uploaded_at TEXT NOT NULL
+        )
+    """)
+    # Migrate: add user_id and doc_type columns if they don't exist
+    try:
+        conn.execute("ALTER TABLE documents ADD COLUMN user_id TEXT NOT NULL DEFAULT ''")
+    except:
+        pass
+    try:
+        conn.execute("ALTER TABLE documents ADD COLUMN doc_type TEXT NOT NULL DEFAULT 'pdf'")
+    except:
+        pass
     conn.commit()
     conn.close()
 
 def get_user_id():
-    """Identify the student (for isolation)."""
+    """
+    Identify the student with a PERSISTENT identity.
+    Priority: X-User-Id header (sent from localStorage) > Flask cookie session.
+    This ensures memory survives page reloads, new tabs, and server restarts.
+    """
+    uid = request.headers.get("X-User-Id", "").strip()
+    if uid:
+        # Also store in session so cookie-only paths stay consistent
+        session["user_id"] = uid
+        return uid
+    # Fallback: cookie session (old behaviour)
     if "user_id" not in session:
         session["user_id"] = str(uuid.uuid4())
     return session["user_id"]
 
 def get_session_id():
-    sid = request.headers.get("X-Session-Id", "")
+    sid = request.headers.get("X-Session-Id", "").strip()
     if sid:
         return sid
     if "session_id" not in session:
@@ -201,6 +231,16 @@ def chat():
     session_id  = get_session_id()
     user_id     = get_user_id()
 
+    if not pdf_context:
+        conn = get_db()
+        # Try session-scoped doc first, then fall back to user-scoped (cross-session)
+        doc_row = conn.execute("SELECT content FROM documents WHERE session_id=? ORDER BY uploaded_at DESC LIMIT 1", (session_id,)).fetchone()
+        if not doc_row:
+            doc_row = conn.execute("SELECT content FROM documents WHERE user_id=? ORDER BY uploaded_at DESC LIMIT 1", (user_id,)).fetchone()
+        conn.close()
+        if doc_row:
+            pdf_context = doc_row["content"]
+
     print(f"DEBUG: User ID: {user_id}")
     print(f"DEBUG: Session ID: {session_id}")
     if not user_msg:
@@ -253,31 +293,121 @@ def upload():
     cleanup_upload(filepath)
     if error:
         return jsonify({"error": True, "message": error})
-    return jsonify({"error": False, "pdf_context": text, "preview": text[:200], "char_count": len(text)})
+    session_id = get_session_id()
+    user_id = get_user_id()
+    conn = get_db()
+    conn.execute("""
+        INSERT INTO documents (user_id, session_id, filename, content, doc_type, uploaded_at)
+        VALUES (?,?,?,?,?,?)
+    """, (user_id, session_id, file.filename, text, "pdf", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"error": False, "pdf_context": text, "filename": file.filename, "preview": text[:200], "char_count": len(text)})
+# ── DOCUMENT LIBRARY ──
+
+@app.route("/documents", methods=["GET"])
+def list_documents():
+    """Return all documents saved by this user."""
+    user_id = get_user_id()
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT id, filename, doc_type, LENGTH(content) as char_count, uploaded_at
+        FROM documents WHERE user_id=?
+        ORDER BY uploaded_at DESC
+    """, (user_id,)).fetchall()
+    conn.close()
+    documents = [{
+        "id": r["id"],
+        "filename": r["filename"],
+        "doc_type": r["doc_type"],
+        "char_count": r["char_count"],
+        "uploaded_at": r["uploaded_at"]
+    } for r in rows]
+    return jsonify({"documents": documents})
+
+@app.route("/documents/<int:doc_id>/activate", methods=["POST"])
+def activate_document(doc_id):
+    """Load a saved document's content so the AI can use it as context."""
+    user_id = get_user_id()
+    conn = get_db()
+    row = conn.execute("SELECT id, filename, content FROM documents WHERE id=? AND user_id=?", (doc_id, user_id)).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"error": True, "message": "Document not found."}), 404
+    return jsonify({
+        "error": False,
+        "pdf_context": row["content"],
+        "filename": row["filename"],
+        "char_count": len(row["content"])
+    })
+
+@app.route("/documents/<int:doc_id>/delete", methods=["DELETE"])
+def delete_document(doc_id):
+    """Remove a document from the user's library."""
+    user_id = get_user_id()
+    conn = get_db()
+    conn.execute("DELETE FROM documents WHERE id=? AND user_id=?", (doc_id, user_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+
+@app.route("/save-text", methods=["POST"])
+def save_text():
+    """Save pasted text as a persistent document."""
+    data = request.get_json()
+    label = data.get("label", "Pasted text").strip() or "Pasted text"
+    content = data.get("content", "").strip()
+    if not content:
+        return jsonify({"error": True, "message": "No text provided."})
+    user_id = get_user_id()
+    session_id = get_session_id()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_db()
+    conn.execute("""
+        INSERT INTO documents (user_id, session_id, filename, content, doc_type, uploaded_at)
+        VALUES (?,?,?,?,?,?)
+    """, (user_id, session_id, label, content, "text", now))
+    conn.commit()
+    conn.close()
+    return jsonify({"error": False, "filename": label, "char_count": len(content)})
 
 # ── PROGRESS & ANALYTICS ──
 
 @app.route("/progress", methods=["GET"])
 def get_progress():
     """Return the student's learning progress across all modules."""
+    user_id = get_user_id()
     conn = get_db()
 
-    # Topic counts
+    # Topic counts — scoped to this user
     topic_rows = conn.execute("""
         SELECT module_code, module_name, topic, COUNT(*) as cnt
-        FROM topic_tracker GROUP BY module_code, topic ORDER BY cnt DESC
-    """).fetchall()
+        FROM topic_tracker WHERE user_id=?
+        GROUP BY module_code, topic ORDER BY cnt DESC
+    """, (user_id,)).fetchall()
 
-    # Total questions asked
-    total = conn.execute("SELECT COUNT(*) as c FROM conversations WHERE role='user'").fetchone()["c"]
+    # Total questions asked — scoped to this user
+    total = conn.execute("""
+        SELECT COUNT(*) as c FROM conversations c
+        JOIN chat_sessions cs ON c.session_id = cs.id
+        WHERE cs.user_id=? AND c.role='user'
+    """, (user_id,)).fetchone()["c"]
 
-    # Total sessions
-    sessions = conn.execute("SELECT COUNT(*) as c FROM chat_sessions WHERE archived=0").fetchone()["c"]
+    # Total sessions — scoped to this user
+    sessions = conn.execute(
+        "SELECT COUNT(*) as c FROM chat_sessions WHERE user_id=? AND archived=0",
+        (user_id,)
+    ).fetchone()["c"]
 
-    # Study streak (count consecutive days with activity)
+    # Study streak — scoped to this user
     day_rows = conn.execute("""
-        SELECT DISTINCT DATE(created_at) as d FROM conversations ORDER BY d DESC LIMIT 30
-    """).fetchall()
+        SELECT DISTINCT DATE(c.created_at) as d
+        FROM conversations c
+        JOIN chat_sessions cs ON c.session_id = cs.id
+        WHERE cs.user_id=?
+        ORDER BY d DESC LIMIT 30
+    """, (user_id,)).fetchall()
     conn.close()
 
     streak = 0

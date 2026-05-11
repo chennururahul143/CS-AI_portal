@@ -17,22 +17,27 @@ OLLAMA_URL     = "http://localhost:11434/api/generate"
 OLLAMA_MODEL   = "deepseek-r1:8b"
 
 # ── TOPIC INTELLIGENCE ──
+STOP_WORDS = {"the", "and", "for", "with", "from", "that", "this", "your", "under", "about", "using"}
+
 # Flattened keyword → (module_code, topic) mapping for fast detection
 TOPIC_KEYWORDS = {}
 for mod in MODULES:
     for topic in mod["topics"]:
         # Extract individual keywords from each topic
-        words = [w.strip().lower() for w in re.split(r'[,;()\s]+', topic) if len(w.strip()) > 2]
+        words = [w.strip().lower() for w in re.split(r'[,;()\s]+', topic) if len(w.strip()) > 3]
         for w in words:
-            TOPIC_KEYWORDS[w] = (mod["code"], mod["name"], topic)
+            if w not in STOP_WORDS:
+                TOPIC_KEYWORDS[w] = (mod["code"], mod["name"], topic)
     # Also map module code and name
     TOPIC_KEYWORDS[mod["code"].lower()] = (mod["code"], mod["name"], "General")
     for word in mod["name"].lower().split():
-        if len(word) > 3:
+        if len(word) >= 4 and word not in STOP_WORDS:
             TOPIC_KEYWORDS[word] = (mod["code"], mod["name"], "General")
 
 # Additional keyword aliases for common student search terms
 KEYWORD_ALIASES = {
+    "rigorous": ("CS603", "Rigorous Software Process", "General"),
+    "process": ("CS603", "Rigorous Software Process", "General"),
     "dijkstra": ("CS605", "Mathematics and Theory of CS", "Graph theory and discrete mathematics"),
     "bfs": ("CS605", "Mathematics and Theory of CS", "Graph theory and discrete mathematics"),
     "dfs": ("CS605", "Mathematics and Theory of CS", "Graph theory and discrete mathematics"),
@@ -92,21 +97,28 @@ TOPIC_KEYWORDS.update(KEYWORD_ALIASES)
 def detect_topic(message):
     """Detect which module/topic the student's question maps to."""
     msg_lower = message.lower()
-    words = re.findall(r'\b[a-z]{3,}\b', msg_lower)
+    
+    
+    # Check for explicit module codes first (e.g., CS603)
+    for mod in MODULES:
+        code = mod["code"].lower()
+        if code in msg_lower:
+            return (mod["code"], mod["name"], "General")
 
-    # Check exact keyword matches (longest match first for accuracy)
+    # Check multi-word phrases first (more specific)
     best_match = None
     best_len = 0
-    for word in words:
-        if word in TOPIC_KEYWORDS and len(word) > best_len:
-            best_match = TOPIC_KEYWORDS[word]
-            best_len = len(word)
-
-    # Also check multi-word phrases
     for phrase, mapping in KEYWORD_ALIASES.items():
         if phrase in msg_lower and len(phrase) > best_len:
             best_match = mapping
             best_len = len(phrase)
+
+    # Then check individual keywords
+    words = re.findall(r'\b[a-z0-9]{3,}\b', msg_lower)
+    for word in words:
+        if word in TOPIC_KEYWORDS and len(word) > best_len:
+            best_match = TOPIC_KEYWORDS[word]
+            best_len = len(word)
 
     return best_match  # Returns (code, module_name, topic) or None
 
@@ -274,7 +286,13 @@ MODE B: TECHNICAL INQUIRY (User asks a CS question, needs a concept explained, o
 - If the student is overwhelmed, use a simple, powerful analogy.
 - Be direct, professional, and intellectually rigorous.
 - ACADEMIC PRECISION: You are mentoring Masters-level students. Avoid surface-level or "popular" answers. If a concept has a formal academic distinction (e.g., "Rigorous" vs. "Agile", "Strong" vs. "Weak" typing), you MUST explain that distinction. Do not conflate industry buzzwords with academic rigor.
+- FORMAL VERIFICATION RIGOR: When analyzing concurrent systems (SPIN, Petri Nets, TLA+, Event-B):
+  1. Never assume a property holds or fails without mentally executing a trace.
+  2. If the question asks "Does this LTL property hold?", trace through at least 3-5 execution steps of all processes to verify the claim.
+  3. If you claim a bug exists, provide a concrete interleaving (step-by-step) that demonstrates the failure.
+  4. If screenshots are requested but you cannot provide them, explicitly state: "I cannot generate screenshots, but you should capture [specific command output] showing [expected result]."
 """
+
 
 
 def detect_prompt_style(message):
@@ -346,7 +364,7 @@ def ask_groq(messages):
         model=GROQ_MODEL,
         messages=messages,
         temperature=0.4,
-        max_tokens=1024,
+        max_tokens=4096,
         top_p=0.9
     )
     return response.choices[0].message.content.strip()
@@ -361,7 +379,7 @@ def ask_nvidia(messages):
         messages=messages,
         temperature=0.4,
         top_p=0.9,
-        max_tokens=1024,
+        max_tokens=4096,
         stream=False
     )
     return response.choices[0].message.content.strip()

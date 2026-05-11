@@ -42,6 +42,124 @@
       --transition: 150ms cubic-bezier(.4, 0, .2, 1);
     }
 
+    /* ── SCROLL DOWN INDICATOR ── */
+    #scroll-down-btn {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      width: 40px;
+      height: 40px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-md);
+      cursor: pointer;
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition);
+      color: var(--text-secondary);
+    }
+
+    #scroll-down-btn.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #scroll-down-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      transform: translateX(-50%) scale(1.1);
+    }
+
+    /* ── COPY BUTTONS ── */
+    .msg-bubble-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .msg-row.user .msg-bubble-wrap {
+      align-items: flex-end;
+    }
+
+    .copy-btn {
+      opacity: 0;
+      position: absolute;
+      bottom: 0;
+      right: -32px;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition);
+      z-index: 5;
+    }
+
+    .msg-group:hover .copy-btn {
+      opacity: 1;
+    }
+
+    .copy-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      transform: scale(1.05);
+    }
+
+    .copy-btn.copied {
+      color: var(--success);
+      border-color: var(--success);
+    }
+
+    .diagram-wrap {
+      position: relative;
+      margin: 12px 0;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .diagram-container {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      overflow-x: auto;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .diagram-copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      opacity: 0;
+      transition: all var(--transition);
+    }
+
+    .diagram-wrap:hover .diagram-copy-btn {
+      opacity: 1;
+    }
+
     [data-theme="dark"] {
       --bg: #0a0a0a;
       --bg-subtle: #141414;
@@ -1567,10 +1685,24 @@
           <span class="tool-badge">Soon</span>
         </button>
 
+        <div class="nav-label" style="margin-top:8px;">My Documents</div>
+        <div id="doc-library" style="padding:0 8px 4px;">
+          <div class="history-empty" style="font-size:12px;padding:8px 4px;">No saved documents yet</div>
+        </div>
+        <button class="tool-item" onclick="openModal('save-text')" style="margin:0 8px 4px;"
+          aria-label="Save text as document">
+          <div class="tool-item-icon" aria-hidden="true">📝</div>
+          <div class="tool-item-info">
+            <div class="tool-item-name">Save Text</div>
+            <div class="tool-item-sub">Paste & persist any text</div>
+          </div>
+        </button>
+
         <div class="nav-label" style="margin-top:8px;">Recent</div>
         <div id="chat-history">
           <div class="history-empty" id="history-empty">No conversations yet</div>
         </div>
+
 
       </nav>
 
@@ -1686,6 +1818,14 @@
       <!-- CHAT AREA -->
       <div class="chat-area" id="chat-area" role="log" aria-live="polite" aria-label="Chat messages">
 
+        <!-- SCROLL DOWN INDICATOR -->
+        <button id="scroll-down-btn" onclick="scrollToBottom()" aria-label="Scroll to bottom">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="7 13 12 18 17 13"></polyline>
+            <polyline points="7 6 12 11 17 6"></polyline>
+          </svg>
+        </button>
+
         <!-- LANDING -->
         <div class="landing" id="landing" aria-label="Welcome screen">
           <div class="landing-hero">
@@ -1727,6 +1867,19 @@
 
       <!-- INPUT -->
       <div class="input-wrap" role="form" aria-label="Message input">
+        <!-- ACTIVE DOC BANNER -->
+        <div id="active-doc-banner"
+          style="display:none; align-items:center; gap:8px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); border-radius:8px; padding:6px 10px; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">
+          <span style="font-size:14px;">📖</span>
+          <span id="active-doc-name"
+            style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">document.pdf</span>
+          <span
+            style="font-size:10px; background:rgba(99,102,241,0.2); padding:2px 6px; border-radius:10px; color:#818cf8;">Active
+            context</span>
+          <button onclick="clearActiveDoc()"
+            style="background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:14px;padding:0;line-height:1;"
+            aria-label="Clear document context">✕</button>
+        </div>
         <div class="pdf-banner" id="pdf-banner" role="status">
           <span aria-hidden="true">📎</span>
           <span class="pdf-banner-name" id="pdf-name">document.pdf</span>
@@ -1761,6 +1914,12 @@
                   <polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
               </button>
+              <button class="send-btn" id="stop-btn" onclick="stopGeneration()" aria-label="Stop generation"
+                title="Stop" style="display: none; background: var(--bg-hover); color: var(--text-primary); border-color: var(--border);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -1772,6 +1931,27 @@
 
   <!-- MODEL MENU OVERLAY -->
   <div id="model-menu-overlay" style="display:none;position:fixed;inset:0;z-index:99;" onclick="closeModelMenu()"></div>
+
+  <!-- SAVE TEXT MODAL -->
+  <div class="modal-backdrop" id="modal-save-text" role="dialog" aria-modal="true" aria-labelledby="save-text-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="save-text-title">📝 Save Text as Document</h2>
+        <button class="modal-close" onclick="closeModal('save-text')" aria-label="Close">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="save-text-label">Document name</label>
+        <input class="form-input" id="save-text-label" type="text"
+          placeholder="e.g. Lecture 3 Notes, My Paper Draft...">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="save-text-content">Paste your text</label>
+        <textarea class="form-textarea" id="save-text-content" rows="6"
+          placeholder="Paste any text here — lecture notes, assignment brief, paper content..."></textarea>
+      </div>
+      <button class="btn-primary" onclick="submitSaveText()">Save &amp; Remember</button>
+    </div>
+  </div>
 
   <!-- EXAM PANIC MODE MODAL -->
   <div class="modal-backdrop" id="modal-panic" role="dialog" aria-modal="true" aria-labelledby="panic-title">
@@ -1857,19 +2037,41 @@
     let isLanding = true;
     let isDark = false;
 
+    /* ── PERSISTENT USER IDENTITY ── */
+    (function () {
+      let uid = localStorage.getItem("cs_portal_user_id");
+      if (!uid) {
+        uid = "u_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem("cs_portal_user_id", uid);
+      }
+      window.PERSISTENT_USER_ID = uid;
+    })();
+
     /* ── SESSION MANAGEMENT ── */
     let currentSessionId = localStorage.getItem("cs_current_session") || null;
     let allSessions = [];
     let ctxTargetId = null;
 
+    let currentAbortController = null;
+    let isTypingCancelled = false;
+
+    window.stopGeneration = function() {
+      if (currentAbortController) {
+        currentAbortController.abort();
+        currentAbortController = null;
+      }
+      isTypingCancelled = true;
+      setLoading(false);
+    };
+
     function getHeaders() {
-      const h = { "Content-Type": "application/json" };
+      const h = { "Content-Type": "application/json", "X-User-Id": PERSISTENT_USER_ID };
       if (currentSessionId) h["X-Session-Id"] = currentSessionId;
       return h;
     }
 
     function getHeadersNoBody() {
-      const h = {};
+      const h = { "X-User-Id": PERSISTENT_USER_ID };
       if (currentSessionId) h["X-Session-Id"] = currentSessionId;
       return h;
     }
@@ -1978,6 +2180,7 @@
       try {
         const res = await fetch(AGENT_URL + "/upload", {
           method: "POST",
+          headers: getHeadersNoBody(),
           body: formData
         });
         const data = await res.json();
@@ -1987,8 +2190,12 @@
           document.getElementById("pdf-banner").classList.remove("show");
           pdfContext = null;
         } else {
-          document.getElementById("pdf-name").textContent = fileNameStr;
+          document.getElementById("pdf-name").textContent = data.filename || fileNameStr;
           pdfContext = data.pdf_context;
+          // Show the persistent active-doc banner
+          showActiveDocBanner(data.filename || fileNameStr);
+          // Refresh document library in sidebar
+          loadDocumentLibrary();
         }
       } catch (e) {
         alert("Upload failed. Check connection.");
@@ -2018,7 +2225,7 @@
     async function newChat() {
       // Create a new session on the server
       try {
-        const res = await fetch(AGENT_URL + "/new-session", { method: "POST" });
+        const res = await fetch(AGENT_URL + "/new-session", { method: "POST", headers: getHeadersNoBody() });
         const data = await res.json();
         currentSessionId = data.session_id;
         localStorage.setItem("cs_current_session", currentSessionId);
@@ -2055,14 +2262,18 @@
       switchToChat();
       appendMsg(msg, "user");
       setLoading(true);
+      scrollToBottom();
 
       try {
+        currentAbortController = new AbortController();
         const res = await fetch(AGENT_URL + "/chat", {
           method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ message: msg, pdf_context: pdfContext, model: selectedModel })
+          body: JSON.stringify({ message: msg, pdf_context: pdfContext, model: selectedModel }),
+          signal: currentAbortController.signal
         });
         const data = await res.json();
+        currentAbortController = null;
         setLoading(false);
         if (data.error) {
           appendMsg("Sorry — " + data.message, "ai", "error");
@@ -2073,11 +2284,18 @@
             currentSessionId = data.session_id;
             localStorage.setItem("cs_current_session", currentSessionId);
           }
+          // Show active doc banner if AI is using a saved document
+          if (data.active_doc) showActiveDocBanner(data.active_doc);
           loadSidebar();
         }
       } catch (e) {
+        currentAbortController = null;
         setLoading(false);
-        appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+        if (e.name === 'AbortError') {
+          appendMsg("Generation stopped by user.", "ai", "error");
+        } else {
+          appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+        }
       }
     }
 
@@ -2105,34 +2323,90 @@
       content.appendChild(meta);
       row.appendChild(avatar);
       row.appendChild(content);
+
+      if (role === "ai") {
+        const wrap = document.createElement("div");
+        wrap.className = "msg-bubble-wrap";
+        wrap.appendChild(bubble);
+
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "copy-btn";
+        copyBtn.title = "Copy message";
+        copyBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>`;
+        copyBtn.onclick = () => copyToClipboard(text, copyBtn);
+        wrap.appendChild(copyBtn);
+        content.insertBefore(wrap, meta);
+      }
+
       group.appendChild(row);
       msgs.appendChild(group);
-
-      const chatArea = document.getElementById("chat-area");
 
       // Typing effect for AI 
       if (role === "ai" && type !== "error" && type !== "no-type") {
         bubble.innerHTML = '<span class="cursor"></span>';
-        chatArea.scrollTop = chatArea.scrollHeight;
+        scrollToBottom(false);
 
         let currentText = "";
         let i = 0;
+        isTypingCancelled = false;
         while (i < text.length) {
+          if (isTypingCancelled) break;
           // Type slightly faster by processing 2-5 characters at a time
           let chunkSize = Math.floor(Math.random() * 4) + 2;
           currentText += text.substring(i, i + chunkSize);
           i += chunkSize;
 
           bubble.innerHTML = formatMarkdown(currentText) + '<span class="cursor"></span>';
-          chatArea.scrollTop = chatArea.scrollHeight;
+          scrollToBottom(false);
 
           // 10-25ms delay per chunk feels like reading speed
           await new Promise(r => setTimeout(r, Math.random() * 15 + 10));
         }
+        if (isTypingCancelled) {
+          text = currentText + " [Stopped]";
+        }
         // Remove cursor at end
-        bubble.innerHTML = formatMarkdown(text);
+        const parsed = parseDiagram(text);
+        bubble.innerHTML = formatMarkdown(parsed.text);
+        scrollToBottom(false);
+
+        if (parsed.diagram) {
+          const diagWrap = document.createElement("div");
+          diagWrap.className = "diagram-wrap";
+          diagWrap.innerHTML = `<div id="diag-${Date.now()}" class="diagram-container"></div>`;
+
+          const diagCopy = document.createElement("button");
+          diagCopy.className = "diagram-copy-btn";
+          diagCopy.textContent = "Copy Mermaid";
+          diagCopy.onclick = () => copyToClipboard(parsed.diagram, diagCopy, "Copied!");
+          diagWrap.appendChild(diagCopy);
+
+          bubble.parentNode.appendChild(diagWrap);
+          renderMermaid(diagWrap.querySelector(".diagram-container"), parsed.diagram);
+        }
       } else {
-        if (role === "ai") bubble.innerHTML = formatMarkdown(text);
+        if (role === "ai") {
+          const parsed = parseDiagram(text);
+          bubble.innerHTML = formatMarkdown(parsed.text);
+          if (parsed.diagram) {
+            const diagWrap = document.createElement("div");
+            diagWrap.className = "diagram-wrap";
+            diagWrap.innerHTML = `<div id="diag-${Date.now()}" class="diagram-container"></div>`;
+
+            const diagCopy = document.createElement("button");
+            diagCopy.className = "diagram-copy-btn";
+            diagCopy.textContent = "Copy Mermaid";
+            diagCopy.onclick = () => copyToClipboard(parsed.diagram, diagCopy, "Copied!");
+            diagWrap.appendChild(diagCopy);
+
+            bubble.parentNode.appendChild(diagWrap);
+            renderMermaid(diagWrap.querySelector(".diagram-container"), parsed.diagram);
+          }
+        }
         else bubble.textContent = text;
       }
 
@@ -2140,7 +2414,10 @@
     }
 
     function setLoading(on) {
-      document.getElementById("send-btn").disabled = on;
+      const sendBtn = document.getElementById("send-btn");
+      const stopBtn = document.getElementById("stop-btn");
+      if (sendBtn) sendBtn.style.display = on ? "none" : "flex";
+      if (stopBtn) stopBtn.style.display = on ? "flex" : "none";
       document.getElementById("chat-input").disabled = on;
       document.getElementById("typing").classList.toggle("show", on);
       if (on) document.getElementById("chat-area").scrollTop = 9999;
@@ -2149,7 +2426,7 @@
     /* ── SIDEBAR HISTORY ── */
     async function loadSidebar() {
       try {
-        const res = await fetch(AGENT_URL + "/history");
+        const res = await fetch(AGENT_URL + "/history", { headers: getHeadersNoBody() });
         const data = await res.json();
         allSessions = data.sessions || [];
         renderSidebar();
@@ -2288,8 +2565,44 @@
       content.className = "msg-content";
       const bubble = document.createElement("div");
       bubble.className = "msg-bubble " + role;
-      if (role === "ai") bubble.innerHTML = formatMarkdown(text);
-      else bubble.textContent = text;
+      if (role === "ai") {
+        const parsed = parseDiagram(text);
+        bubble.innerHTML = formatMarkdown(parsed.text);
+
+        const wrap = document.createElement("div");
+        wrap.className = "msg-bubble-wrap";
+        wrap.appendChild(bubble);
+
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "copy-btn";
+        copyBtn.title = "Copy message";
+        copyBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>`;
+        copyBtn.onclick = () => copyToClipboard(text, copyBtn);
+        wrap.appendChild(copyBtn);
+        content.appendChild(wrap);
+
+        if (parsed.diagram) {
+          const diagWrap = document.createElement("div");
+          diagWrap.className = "diagram-wrap";
+          diagWrap.innerHTML = `<div id="diag-${Date.now()}-${Math.random().toString(36).slice(2, 6)}" class="diagram-container"></div>`;
+
+          const diagCopy = document.createElement("button");
+          diagCopy.className = "diagram-copy-btn";
+          diagCopy.textContent = "Copy Mermaid";
+          diagCopy.onclick = () => copyToClipboard(parsed.diagram, diagCopy, "Copied!");
+          diagWrap.appendChild(diagCopy);
+
+          content.appendChild(diagWrap);
+          renderMermaid(diagWrap.querySelector(".diagram-container"), parsed.diagram);
+        }
+      } else {
+        bubble.textContent = text;
+        content.appendChild(bubble);
+      }
       const meta = document.createElement("div");
       meta.className = "msg-meta";
       const sourceLabel = source === "groq" ? "Groq" : source === "nvidia" ? "NVIDIA" : source === "ollama" ? "Ollama" : "";
@@ -2452,12 +2765,15 @@
       appendMsg(msg, "user");
       setLoading(true);
       try {
+        currentAbortController = new AbortController();
         const res = await fetch(AGENT_URL + "/tool/panic", {
           method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ module: mod, topic: topic, model: selectedModel })
+          body: JSON.stringify({ module: mod, topic: topic, model: selectedModel }),
+          signal: currentAbortController.signal
         });
         const data = await res.json();
+        currentAbortController = null;
         setLoading(false);
         if (data.error) appendMsg("Sorry — " + data.message, "ai", "error");
         else {
@@ -2466,8 +2782,13 @@
           loadSidebar();
         }
       } catch (e) {
+        currentAbortController = null;
         setLoading(false);
-        appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+        if (e.name === 'AbortError') {
+          appendMsg("Generation stopped by user.", "ai", "error");
+        } else {
+          appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+        }
       }
     }
 
@@ -2481,12 +2802,15 @@
       appendMsg(msg, "user");
       setLoading(true);
       try {
+        currentAbortController = new AbortController();
         const res = await fetch(AGENT_URL + "/tool/clash", {
           method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ concept1: a, concept2: b, model: selectedModel })
+          body: JSON.stringify({ concept1: a, concept2: b, model: selectedModel }),
+          signal: currentAbortController.signal
         });
         const data = await res.json();
+        currentAbortController = null;
         setLoading(false);
         if (data.error) appendMsg("Sorry — " + data.message, "ai", "error");
         else {
@@ -2495,8 +2819,13 @@
           loadSidebar();
         }
       } catch (e) {
+        currentAbortController = null;
         setLoading(false);
-        appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+        if (e.name === 'AbortError') {
+          appendMsg("Generation stopped by user.", "ai", "error");
+        } else {
+          appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+        }
       }
     }
 
@@ -2509,15 +2838,19 @@
       appendMsg("[Explain My Lecturer] " + (file ? file.name : "pasted content"), "user");
       setLoading(true);
       try {
+        currentAbortController = new AbortController();
         const formData = new FormData();
         formData.append("model", selectedModel);
         if (file) formData.append("pdf", file);
         if (text) formData.append("text", text);
         const res = await fetch(AGENT_URL + "/tool/lecturer", {
           method: "POST",
-          body: formData
+          headers: getHeadersNoBody(),
+          body: formData,
+          signal: currentAbortController.signal
         });
         const data = await res.json();
+        currentAbortController = null;
         setLoading(false);
         if (data.error) appendMsg("Sorry — " + data.message, "ai", "error");
         else {
@@ -2526,8 +2859,13 @@
           loadSidebar();
         }
       } catch (e) {
+        currentAbortController = null;
         setLoading(false);
-        appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+        if (e.name === 'AbortError') {
+          appendMsg("Generation stopped by user.", "ai", "error");
+        } else {
+          appendMsg("Could not reach the AI. Check your connection.", "ai", "error");
+        }
       }
     }
 
@@ -2541,18 +2879,40 @@
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 
+    /* ── SCROLL EVENTS ── */
+    const chatArea = document.getElementById("chat-area");
+    chatArea.addEventListener("scroll", () => {
+      const btn = document.getElementById("scroll-down-btn");
+      // Show button if user is more than 300px from the bottom
+      const distanceToBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight;
+      if (distanceToBottom > 300) {
+        btn.classList.add("show");
+      } else {
+        btn.classList.remove("show");
+      }
+    });
+
+    function scrollToBottom(smooth = true) {
+      chatArea.scrollTo({
+        top: chatArea.scrollHeight,
+        behavior: smooth ? "smooth" : "auto"
+      });
+    }
+
     /* ── ESCAPE KEY ── */
     document.addEventListener("keydown", e => {
       if (e.key === "Escape") {
         document.querySelectorAll(".modal-backdrop.open").forEach(m => m.classList.remove("open"));
         closeModelMenu();
         closeCtxMenu();
+        stopGeneration();
       }
     });
 
     /* ── INIT ON PAGE LOAD ── */
     (async function init() {
       await loadSidebar();
+      await loadDocumentLibrary();
       // If we had a previous session, try to reload it
       if (currentSessionId) {
         const session = allSessions.find(s => s.id === currentSessionId);
@@ -2561,6 +2921,187 @@
         }
       }
     })();
+
+    /* ── DOCUMENT LIBRARY ── */
+    let docLibrary = [];
+
+    async function loadDocumentLibrary() {
+      try {
+        const res = await fetch(AGENT_URL + "/documents", { headers: getHeadersNoBody() });
+        const data = await res.json();
+        docLibrary = data.documents || [];
+        renderDocumentLibrary();
+      } catch (e) { /* silent fail */ }
+    }
+
+    function renderDocumentLibrary() {
+      const container = document.getElementById("doc-library");
+      if (!container) return;
+      if (docLibrary.length === 0) {
+        container.innerHTML = '<div class="history-empty" style="font-size:12px;padding:8px 4px;">No saved documents yet</div>';
+        return;
+      }
+      container.innerHTML = "";
+      docLibrary.forEach(doc => {
+        const btn = document.createElement("button");
+        btn.style.cssText = "display:flex;align-items:center;gap:6px;width:100%;padding:6px 8px;border:none;background:none;cursor:pointer;border-radius:6px;font-size:12px;color:var(--text-secondary);text-align:left;transition:background 0.15s;";
+        btn.onmouseover = () => btn.style.background = "var(--surface-hover, rgba(255,255,255,0.05))";
+        btn.onmouseout = () => btn.style.background = "none";
+        const icon = doc.doc_type === "pdf" ? "📄" : "📝";
+        const kb = Math.round(doc.char_count / 1000);
+        btn.innerHTML = `
+          <span style="font-size:14px;flex-shrink:0;">${icon}</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${doc.filename}">${doc.filename}</span>
+          <span style="font-size:10px;opacity:0.6;flex-shrink:0;">${kb}k</span>
+          <button onclick="event.stopPropagation();deleteDocument(${doc.id})" title="Delete" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:13px;padding:0 2px;opacity:0.7;">✕</button>
+        `;
+        btn.addEventListener("click", () => activateDocument(doc.id, doc.filename));
+        container.appendChild(btn);
+      });
+    }
+
+    async function activateDocument(docId, filename) {
+      try {
+        const res = await fetch(AGENT_URL + "/documents/" + docId + "/activate", {
+          method: "POST", headers: getHeadersNoBody()
+        });
+        const data = await res.json();
+        if (data.error) { alert(data.message); return; }
+        pdfContext = data.pdf_context;
+        showActiveDocBanner(data.filename);
+        // Also update the pdf-banner for visual consistency
+        document.getElementById("pdf-name").textContent = data.filename;
+        document.getElementById("pdf-banner").classList.add("show");
+        closeSidebar();
+        appendSystemMsg(`📖 Activated: "${data.filename}" — I'll use this as context for all your questions.`);
+      } catch (e) { alert("Could not load document."); }
+    }
+
+    async function deleteDocument(docId) {
+      if (!confirm("Remove this document from your library?")) return;
+      try {
+        await fetch(AGENT_URL + "/documents/" + docId + "/delete", {
+          method: "DELETE", headers: getHeadersNoBody()
+        });
+        loadDocumentLibrary();
+        // If the deleted doc was active, clear it
+        pdfContext = null;
+        clearActiveDoc();
+      } catch (e) { alert("Could not delete document."); }
+    }
+
+    function showActiveDocBanner(filename) {
+      const banner = document.getElementById("active-doc-banner");
+      const name = document.getElementById("active-doc-name");
+      if (banner && name) {
+        name.textContent = filename;
+        banner.style.display = "flex";
+      }
+    }
+
+    function clearActiveDoc() {
+      pdfContext = null;
+      const banner = document.getElementById("active-doc-banner");
+      if (banner) banner.style.display = "none";
+      document.getElementById("pdf-banner").classList.remove("show");
+    }
+
+    async function submitSaveText() {
+      const label = (document.getElementById("save-text-label").value.trim()) || "Pasted text";
+      const content = document.getElementById("save-text-content").value.trim();
+      if (!content) { alert("Please paste some text first."); return; }
+      closeModal("save-text");
+      try {
+        const res = await fetch(AGENT_URL + "/save-text", {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify({ label, content })
+        });
+        const data = await res.json();
+        if (data.error) { alert(data.message); return; }
+        pdfContext = content;
+        showActiveDocBanner(data.filename);
+        document.getElementById("pdf-name").textContent = data.filename;
+        document.getElementById("pdf-banner").classList.add("show");
+        loadDocumentLibrary();
+        appendSystemMsg(`📝 Saved: "${data.filename}" (${Math.round(data.char_count / 1000)}k chars) — I'll remember this text across all your sessions.`);
+        // Reset modal fields
+        document.getElementById("save-text-label").value = "";
+        document.getElementById("save-text-content").value = "";
+      } catch (e) { alert("Could not save text."); }
+    }
+
+    function appendSystemMsg(text) {
+      const msgs = document.getElementById("messages");
+      if (!msgs) return;
+      const div = document.createElement("div");
+      div.style.cssText = "text-align:center;font-size:12px;color:var(--text-secondary);padding:6px 16px;opacity:0.8;";
+      div.textContent = text;
+      msgs.appendChild(div);
+      document.getElementById("chat-area").scrollTop = 9999;
+    }
+
+    /* ── UTILS ── */
+    function copyToClipboard(text, btn, successText) {
+      navigator.clipboard.writeText(text).then(() => {
+        const original = btn.innerHTML;
+        const originalText = btn.textContent;
+        btn.classList.add("copied");
+        if (successText) btn.textContent = successText;
+        else btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+        setTimeout(() => {
+          btn.classList.remove("copied");
+          if (successText) btn.textContent = originalText;
+          else btn.innerHTML = original;
+        }, 2000);
+      });
+    }
+
+    /* ── MERMAID ── */
+    let mermaidLoaded = false;
+    function loadMermaid() {
+      if (window.mermaid) return;
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js";
+      s.onload = () => {
+        mermaid.initialize({ startOnLoad: false, theme: document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "default" });
+        mermaidLoaded = true;
+      };
+      document.head.appendChild(s);
+    }
+    loadMermaid();
+
+    function parseDiagram(content) {
+      const diagramRegex = /DIAGRAM:\s*```mermaid\s*([\s\S]*?)```/i;
+      const match = content.match(diagramRegex);
+      if (match) {
+        const text = content.replace(diagramRegex, "").trim();
+        return { text, diagram: match[1].trim() };
+      }
+      const mermaidOnly = /```mermaid\s*([\s\S]*?)```/i;
+      const m2 = content.match(mermaidOnly);
+      if (m2) {
+        const text = content.replace(mermaidOnly, "").trim();
+        return { text, diagram: m2[1].trim() };
+      }
+      return { text: content, diagram: null };
+    }
+
+    async function renderMermaid(container, code) {
+      if (!mermaidLoaded) {
+        setTimeout(() => renderMermaid(container, code), 100);
+        return;
+      }
+      const id = "mermaid-" + Math.random().toString(36).slice(2, 10);
+      try {
+        const { svg } = await mermaid.render(id, code);
+        container.innerHTML = svg;
+      } catch (e) {
+        container.innerHTML = "<div style='color:red;font-size:12px;'>Diagram render failed</div>";
+      }
+    }
+
   </script>
 </body>
 
