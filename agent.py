@@ -211,8 +211,9 @@ def build_welcome_line(all_history, topic_counts, is_first_message_in_session):
     if not all_history:
         return ""  # Let the AI handle the welcome naturally
 
-    # Returning student — build recall
+    # Returning student — build a structured recap
     parts = []
+    parts.append("RETURNING_STUDENT=true")
 
     # What they last studied
     if all_history:
@@ -222,13 +223,29 @@ def build_welcome_line(all_history, topic_counts, is_first_message_in_session):
             last_q = last_q.replace(prefix, "").strip()
         if len(last_q) > 60:
             last_q = last_q[:60].rsplit(" ", 1)[0] + "…"
-        parts.append(f"Last time you were exploring: **{last_q}**")
+        parts.append(f"LAST_TOPIC: {last_q}")
+
+        # Gather a few recent distinct topics for variety
+        recent_topics = []
+        seen = set()
+        for h in reversed(all_history[-10:]):
+            q = h["user"]
+            for prefix in ["[Panic]", "[Clash]", "[Lecturer]"]:
+                q = q.replace(prefix, "").strip()
+            short = q[:50].rsplit(" ", 1)[0] if len(q) > 50 else q
+            if short.lower() not in seen and short.lower() not in ("hi", "hello", "hey"):
+                seen.add(short.lower())
+                recent_topics.append(short)
+            if len(recent_topics) >= 3:
+                break
+        if recent_topics:
+            parts.append(f"RECENT_TOPICS: {' | '.join(recent_topics)}")
 
     # Total topics covered
     if topic_counts:
         total_topics = sum(topic_counts.values())
         unique_topics = len(topic_counts)
-        parts.append(f"📊 You've covered {unique_topics} topics across {total_topics} questions.")
+        parts.append(f"STATS: {unique_topics} topics, {total_topics} questions asked")
 
         # Find their strongest module
         module_counts = {}
@@ -239,7 +256,7 @@ def build_welcome_line(all_history, topic_counts, is_first_message_in_session):
         if module_counts:
             strongest = max(module_counts, key=module_counts.get)
             strongest_name = next(m["name"] for m in MODULES if m["code"] == strongest)
-            parts.append(f"💪 Your strongest area: {strongest} — {strongest_name}")
+            parts.append(f"STRONGEST: {strongest} — {strongest_name}")
 
         # Suggest unexplored
         explored_modules = set(module_counts.keys())
@@ -247,7 +264,10 @@ def build_welcome_line(all_history, topic_counts, is_first_message_in_session):
         unexplored = all_codes - explored_modules
         if unexplored:
             suggest_mod = next(m for m in MODULES if m["code"] in unexplored)
-            parts.append(f"💡 You haven't explored **{suggest_mod['code']} — {suggest_mod['name']}** yet. Want to start?")
+            parts.append(f"UNEXPLORED: {suggest_mod['code']} — {suggest_mod['name']}")
+    else:
+        # No topic tracking yet, but they have history
+        parts.append(f"STATS: {len(all_history)} questions asked")
 
     return "\n".join(parts)
 
@@ -260,12 +280,21 @@ SYSTEM_PROMPT = f"""You are a world-class Computer Science Mentor. Your goal is 
 
 Determine which mode to use based on the user's input:
 
-MODE A: GREETINGS & ONBOARDING (User says "Hi", "Hello", "Who are you?")
-- Be warm, welcoming, and concise. 
-- DO NOT use the "Closing Loop" (no recaps, no challenge questions).
-- MEMORY INTEGRATION: If STUDENT_MEMORY is provided, weave it in naturally. 
-  - Example: "Welcome back! I see you've been making great progress in Cryptography. Ready to pick up where we left off, or dive into something new?"
-- If they are new, briefly mention the modules they can explore without listing them all like a menu.
+MODE A: GREETINGS & ONBOARDING (User says "Hi", "Hello", "Hey", "Who are you?", or any casual greeting)
+- DO NOT give a technical explanation. DO NOT use the "Closing Loop" (no challenge questions).
+- KEEP IT SHORT — 3-5 sentences maximum.
+
+- FOR NEW STUDENTS (no WELCOME_CONTEXT):
+  - Warm, brief welcome. Mention you can help with CS topics. Do NOT list all modules like a menu.
+
+- FOR RETURNING STUDENTS (WELCOME_CONTEXT is provided):
+  - You MUST follow this exact structure:
+    1. **Warm greeting** (one sentence, e.g. "Welcome back! 👋" or "Hey, good to see you again!")
+    2. **Brief recap** of what they studied last time (use LAST_TOPIC and RECENT_TOPICS from the context). Keep it to 1-2 sentences.
+    3. **Quick progress stat** (use STATS from the context, e.g. "You've covered X topics so far")
+    4. **Offer to continue or explore something new** (one sentence, e.g. "Want to pick up where you left off, or try something new?")
+  - NEVER skip the recap. NEVER launch into a technical explanation.
+  - Example: "Hey, welcome back! 👋 Last time you were diving into backpropagation and gradient descent — solid progress! You've covered 5 topics across 12 questions so far. Want to continue with Deep Learning, or explore something new?"
 
 MODE B: TECHNICAL INQUIRY (User asks a CS question, needs a concept explained, or wants code)
 - Use the "World-Class Mentor" approach:
@@ -323,7 +352,7 @@ def build_messages(user_message, history, pdf_context=None,
 
     # Inject welcome context for first message in session
     if welcome_context:
-        system += f"\n\nWELCOME_CONTEXT (weave this into the START of your response naturally):\n{welcome_context}"
+        system += f"\n\nWELCOME_CONTEXT (MANDATORY — you MUST use this data in your greeting. Follow the MODE A structure exactly):\n{welcome_context}"
 
     # Inject struggle signals
     if struggle_signals:
